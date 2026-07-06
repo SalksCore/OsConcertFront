@@ -31,7 +31,7 @@ import {
 import Image from "next/image";
 import { FormEvent, PointerEvent, useEffect, useRef, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
 
 type ScreenState = {
   mode: "off" | "boot" | "color" | "media" | "message" | "stream";
@@ -110,6 +110,11 @@ export default function Home() {
   const [selected, setSelected] = useState<string[]>([]);
   const [color, setColor] = useState("#ff9f1a");
   const [activeMediaId, setActiveMediaId] = useState("");
+  const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "audio">("image");
+  const [mediaFit, setMediaFit] = useState<"contain" | "stretch">("contain");
+  const [messageText, setMessageText] = useState("CONCERT OS");
+  const [streamStatus, setStreamStatus] = useState("Pret a capturer une fenetre, un logiciel ou un ecran.");
+  const [copiedScreenId, setCopiedScreenId] = useState("");
   const [streaming, setStreaming] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -131,6 +136,7 @@ export default function Home() {
   const groups = snapshot.groups.filter((group) => group.concertId === snapshot.settings.activeConcertId);
   const selectedScreens = screens.filter((screen) => selected.includes(screen.id));
   const activeMedia = snapshot.media.find((media) => media.id === activeMediaId) || snapshot.media[0];
+  const filteredMedia = snapshot.media.filter((media) => mediaFilter === "all" || media.type === mediaFilter);
 
   async function login(event: FormEvent) {
     event.preventDefault();
@@ -159,23 +165,46 @@ export default function Home() {
 
   async function createScreen(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     await api("/api/v1/screens", {
       method: "POST",
       body: JSON.stringify({
         concertId: snapshot.settings.activeConcertId,
         name: form.get("name"),
-        id: form.get("id"),
         width: Number(form.get("width")),
         height: Number(form.get("height")),
       }),
     });
-    event.currentTarget.reset();
+    formElement.reset();
+  }
+
+  async function deleteScreen(screen: Screen) {
+    if (!window.confirm(`Supprimer l'ecran "${screen.name}" ?`)) return;
+    await api(`/api/v1/screens/${screen.id}`, { method: "DELETE" });
+    setSelected((current) => current.filter((id) => id !== screen.id));
+  }
+
+  async function copyScreenLink(screen: Screen) {
+    const link = `${window.location.origin}/screen/${screen.id}`;
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+    } else {
+      const input = document.createElement("input");
+      input.value = link;
+      document.body.append(input);
+      input.select();
+      document.execCommand("copy");
+      input.remove();
+    }
+    setCopiedScreenId(screen.id);
+    window.setTimeout(() => setCopiedScreenId((current) => (current === screen.id ? "" : current)), 1600);
   }
 
   async function createGroup(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     await api("/api/v1/groups", {
       method: "POST",
       body: JSON.stringify({
@@ -185,17 +214,19 @@ export default function Home() {
         screenIds: selected,
       }),
     });
+    formElement.reset();
   }
 
   async function createConcert(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     await api("/api/v1/concerts", {
       method: "POST",
       body: JSON.stringify({ name: form.get("name") || "Nouveau concert" }),
     });
     setSelected([]);
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   async function renameConcert(concert: Concert) {
@@ -212,42 +243,61 @@ export default function Home() {
 
   async function uploadMedia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const media = await api("/api/v1/media", { method: "POST", body: form });
     setActiveMediaId(media.id);
-    event.currentTarget.reset();
+    formElement.reset();
   }
 
   async function startStream() {
-    if (!selected.length) return;
-    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-    streamRef.current = stream;
-    if (videoRef.current) {
-      videoRef.current.srcObject = stream;
-      await videoRef.current.play();
+    if (!selected.length) {
+      setStreamStatus("Selectionne au moins un ecran avant de lancer le stream.");
+      setView("live");
+      return;
     }
-    setStreaming(true);
-    await command({ mode: "stream" }, "stream");
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d");
-    const sendFrame = async () => {
-      if (!streamRef.current || !videoRef.current || !context) return;
-      canvas.width = videoRef.current.videoWidth || 1280;
-      canvas.height = videoRef.current.videoHeight || 720;
-      context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
-      await api("/api/v1/stream/frame", {
-        method: "POST",
-        body: JSON.stringify({ screenIds: selected, frame: canvas.toDataURL("image/jpeg", 0.62) }),
-      }).catch(() => {});
-      if (streamRef.current) window.setTimeout(sendFrame, 1000 / snapshot.settings.streamFps);
-    };
-    sendFrame();
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      setStreamStatus("Capture indisponible: ouvre l'app via http://localhost:3000 dans un navigateur compatible.");
+      return;
+    }
+
+    try {
+      setStreamStatus("Choisis la fenetre, le logiciel ou l'ecran a diffuser...");
+      const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+      streamRef.current = stream;
+      stream.getVideoTracks()[0]?.addEventListener("ended", stopStream);
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+      setStreaming(true);
+      setStreamStatus("Stream actif. Les frames sont envoyees aux ecrans selectionnes.");
+      await command({ mode: "stream" }, "stream");
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+      const sendFrame = async () => {
+        if (!streamRef.current || !videoRef.current || !context) return;
+        canvas.width = videoRef.current.videoWidth || 1280;
+        canvas.height = videoRef.current.videoHeight || 720;
+        context.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+        await api("/api/v1/stream/frame", {
+          method: "POST",
+          body: JSON.stringify({ screenIds: selected, frame: canvas.toDataURL("image/jpeg", 0.68) }),
+        }).catch(() => {});
+        if (streamRef.current) window.setTimeout(sendFrame, 1000 / snapshot.settings.streamFps);
+      };
+      sendFrame();
+    } catch (error) {
+      setStreaming(false);
+      setStreamStatus(error instanceof Error ? `Stream annule ou refuse: ${error.message}` : "Stream annule ou refuse.");
+    }
   }
 
   function stopStream() {
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
     setStreaming(false);
+    setStreamStatus("Stream arrete.");
   }
 
   function toggleScreen(screenId: string) {
@@ -385,7 +435,17 @@ export default function Home() {
               <p className="hint">L'identifiant technique est genere automatiquement par le site. Largeur = nombre de blocs horizontal, hauteur = nombre de blocs vertical.</p>
             </Panel>
             <div className="cards">
-              {screens.map((screen) => <ScreenCard key={screen.id} screen={screen} selected={selected.includes(screen.id)} onClick={() => toggleScreen(screen.id)} />)}
+              {screens.map((screen) => (
+                <ScreenCard
+                  key={screen.id}
+                  screen={screen}
+                  selected={selected.includes(screen.id)}
+                  onClick={() => toggleScreen(screen.id)}
+                  onDelete={() => deleteScreen(screen)}
+                  onCopyLink={() => copyScreenLink(screen)}
+                  copied={copiedScreenId === screen.id}
+                />
+              ))}
             </div>
           </section>
         )}
@@ -429,7 +489,10 @@ export default function Home() {
               </form>
             </Panel>
             <div className="mediaLayout">
-              <MediaGrid media={snapshot.media} activeId={activeMediaId} onPick={setActiveMediaId} />
+              <div className="mediaLibrary">
+                <MediaTabs value={mediaFilter} onChange={setMediaFilter} counts={snapshot.media} />
+                <MediaGrid media={filteredMedia} activeId={activeMediaId} onPick={setActiveMediaId} />
+              </div>
               <Panel title="Previsualisation" icon={<Play size={18} />}>
                 <MediaPreview media={activeMedia} />
               </Panel>
@@ -467,36 +530,70 @@ export default function Home() {
                 {groups.map((group) => <button key={group.id} onClick={() => setSelected(group.screenIds)} style={{ borderColor: group.color }}>{group.name}</button>)}
                 <button onClick={() => setView("live")}><RadioTower size={15} /> Voir les ecrans</button>
               </div>
-              <div className="buttonGrid">
-                <button onClick={() => command({ mode: "boot" }, "boot")}><Power size={16} /> Boot</button>
-                <button onClick={() => command({ mode: "boot", message: "Restarting" }, "restart")}><RotateCw size={16} /> Restart</button>
-                <button className="danger" onClick={() => command({ mode: "off" }, "off")}>Off</button>
+              <div className="console">
+                <div className="modulePanel powerModule">
+                  <p className="moduleTitle"><Power size={16} /> Alimentation</p>
+                  <div className="deckGrid">
+                    <button className="deckKey" onClick={() => command({ mode: "boot" }, "boot")}><Power size={24} /><strong>Boot</strong><span>Demarrage OS</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "boot", message: "Restarting" }, "restart")}><RotateCw size={24} /><strong>Restart</strong><span>Relance ecran</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "message", message: "STANDBY" }, "standby")}><RadioTower size={24} /><strong>Standby</strong><span>Message attente</span></button>
+                    <button className="deckKey danger" onClick={() => command({ mode: "off" }, "off")}><ScreenShareOff size={24} /><strong>Off</strong><span>Noir complet</span></button>
+                  </div>
+                </div>
+
+                <div className="modulePanel colorModule">
+                  <p className="moduleTitle"><Palette size={16} /> Couleur directe</p>
+                  <div className="colorConsole">
+                    <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+                    <div className="colorPreview" style={{ background: color }} />
+                    <button className="primary" onClick={() => command({ mode: "color", color, animation: "none" }, "color")}><Palette size={16} /> Envoyer</button>
+                  </div>
+                  <div className="presetGrid deckPresetGrid">
+                    {["#000000", "#ffffff", "#ff6a00", "#f4b23b", "#ff2f2f", "#13d18d", "#2878ff", "#9b4dff"].map((preset) => (
+                      <button key={preset} style={{ background: preset }} onClick={() => setColor(preset)} aria-label={preset} />
+                    ))}
+                  </div>
+                  <div className="messageConsole">
+                    <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Message texte" />
+                    <button onClick={() => command({ mode: "message", message: messageText }, "message")}>Afficher texte</button>
+                  </div>
+                </div>
+
+                <div className="modulePanel mediaModule">
+                  <p className="moduleTitle"><ImageIcon size={16} /> Medias a diffuser</p>
+                  <MediaTabs value={mediaFilter} onChange={setMediaFilter} counts={snapshot.media} />
+                  <MediaGrid media={filteredMedia} activeId={activeMediaId} onPick={setActiveMediaId} compact deck />
+                  <MediaPreview media={activeMedia} />
+                  <div className="fitSwitch">
+                    <button className={cx(mediaFit === "contain" && "active")} onClick={() => setMediaFit("contain")}>Adapter</button>
+                    <button className={cx(mediaFit === "stretch" && "active")} onClick={() => setMediaFit("stretch")}>Etendre</button>
+                  </div>
+                  <div className="buttonGrid">
+                    <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
+                    <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "stretch" }, "stretch")}>Plein ecran force</button>
+                  </div>
+                </div>
+
+                <div className="modulePanel effectsModule">
+                  <p className="moduleTitle"><WandSparkles size={16} /> Animations rapides</p>
+                  <div className="deckGrid">
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "none" }, "none")}><Palette size={24} /><strong>Fixe</strong><span>Couleur stable</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "pulse" }, "pulse")}><WandSparkles size={24} /><strong>Pulse</strong><span>Respiration</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "scan" }, "scan")}><RadioTower size={24} /><strong>Scan</strong><span>Balayage</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "message", message: "TEST SIGNAL" }, "test")}><Clapperboard size={24} /><strong>Mire</strong><span>Test signal</span></button>
+                  </div>
+                </div>
+
+                <div className="modulePanel streamModule">
+                  <p className="moduleTitle"><ScreenShare size={16} /> Capture ecran en direct</p>
+                  <div className="deckGrid">
+                    <button className="deckKey primaryDeck" onClick={startStream} disabled={streaming}><ScreenShare size={24} /><strong>Choisir source</strong><span>Fenetre / ecran</span></button>
+                    <button className="deckKey danger" onClick={stopStream}><ScreenShareOff size={24} /><strong>Stop</strong><span>Arreter stream</span></button>
+                  </div>
+                  <p className="streamStatus">{streamStatus}</p>
+                  <video ref={videoRef} muted autoPlay playsInline />
+                </div>
               </div>
-              <label>Couleur</label>
-              <div className="inline">
-                <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
-                <button className="primary" onClick={() => command({ mode: "color", color, animation: "none" }, "color")}><Palette size={16} /> Envoyer</button>
-              </div>
-              <label>Media</label>
-              <select value={activeMedia?.id || ""} onChange={(event) => setActiveMediaId(event.target.value)}>
-                {snapshot.media.map((media) => <option key={media.id} value={media.id}>{media.name}</option>)}
-              </select>
-              <MediaPreview media={activeMedia} />
-              <div className="buttonGrid">
-                <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "contain" }, "media")}><Play size={16} /> Jouer</button>
-                <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "stretch" }, "stretch")}>Etendre</button>
-              </div>
-              <label>Animation</label>
-              <div className="buttonGrid">
-                <button onClick={() => command({ mode: "color", color, animation: "pulse" }, "pulse")}><WandSparkles size={16} /> Pulse</button>
-                <button onClick={() => command({ mode: "color", color, animation: "scan" }, "scan")}>Scan</button>
-              </div>
-              <label>Stream ecran</label>
-              <div className="buttonGrid">
-                <button className="primary" onClick={startStream} disabled={streaming}><ScreenShare size={16} /> Stream</button>
-                <button className="danger" onClick={stopStream}><ScreenShareOff size={16} /> Stop</button>
-              </div>
-              <video ref={videoRef} muted autoPlay playsInline />
             </aside>
           </section>
         )}
@@ -521,41 +618,89 @@ function Panel({ title, icon, children }: { title: string; icon: React.ReactNode
   return <section className="panel"><h3>{icon}{title}</h3>{children}</section>;
 }
 
-function ScreenCard({ screen, selected, onClick }: { screen: Screen; selected: boolean; onClick: () => void }) {
+function ScreenCard({
+  screen,
+  selected,
+  onClick,
+  onDelete,
+  onCopyLink,
+  copied,
+}: {
+  screen: Screen;
+  selected: boolean;
+  onClick: () => void;
+  onDelete: () => void;
+  onCopyLink: () => void;
+  copied: boolean;
+}) {
   return (
-    <button className={cx("screenCard", selected && "selected")} onClick={onClick}>
-      <div><strong>{screen.name}</strong><span>{screen.id}</span></div>
-      <small>{screen.width} x {screen.height} blocs</small>
-      <b className={screen.online ? "online" : ""}>{screen.online ? "online" : "offline"}</b>
-    </button>
+    <article className={cx("screenCard", selected && "selected")}>
+      <button className="screenSelect" onClick={onClick}>
+        <div><strong>{screen.name}</strong><span>{screen.id}</span></div>
+        <small>{screen.width} x {screen.height} blocs</small>
+        <b className={screen.online ? "online" : ""}>{screen.online ? "online" : "offline"}</b>
+      </button>
+      <div className="screenActions">
+        <button className={cx("screenLink", copied && "copied")} onClick={onCopyLink}>
+          <Clapperboard size={16} /> {copied ? "Copie" : "Lien diffusion"}
+        </button>
+        <button className="screenDelete danger" onClick={onDelete}><Trash2 size={16} /> Supprimer</button>
+      </div>
+    </article>
   );
 }
 
 function Stage({ screens, selected, onToggle, editable = false }: { screens: Screen[]; selected: string[]; onToggle: (id: string) => void; editable?: boolean }) {
-  const dragRef = useRef<{ id: string; dx: number; dy: number } | null>(null);
-  async function move(screen: Screen, event: PointerEvent<HTMLButtonElement>) {
-    if (!editable || !dragRef.current) return;
+  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const dragRef = useRef<{ id: string; dx: number; dy: number; moved: boolean; x: number; y: number } | null>(null);
+  const skipClickRef = useRef(false);
+
+  useEffect(() => {
+    if (dragRef.current) return;
+    setPositions(Object.fromEntries(screens.map((screen) => [screen.id, { x: screen.x, y: screen.y }])));
+  }, [screens]);
+
+  function move(screen: Screen, event: PointerEvent<HTMLButtonElement>) {
+    if (!editable || !dragRef.current || dragRef.current.id !== screen.id) return;
     const parent = event.currentTarget.parentElement?.getBoundingClientRect();
     if (!parent) return;
     const x = Math.max(0, event.clientX - parent.left - dragRef.current.dx);
     const y = Math.max(0, event.clientY - parent.top - dragRef.current.dy);
-    await api(`/api/v1/screens/${screen.id}`, { method: "PATCH", body: JSON.stringify({ x, y }) }).catch(() => {});
+    dragRef.current = { ...dragRef.current, moved: true, x, y };
+    setPositions((current) => ({ ...current, [screen.id]: { x, y } }));
   }
+
+  async function endDrag(screen: Screen) {
+    const drag = dragRef.current;
+    dragRef.current = null;
+    if (!editable || !drag || drag.id !== screen.id || !drag.moved) return;
+    skipClickRef.current = true;
+    window.setTimeout(() => {
+      skipClickRef.current = false;
+    }, 0);
+    await api(`/api/v1/screens/${screen.id}`, { method: "PATCH", body: JSON.stringify({ x: drag.x, y: drag.y }) }).catch(() => {});
+  }
+
   return (
     <div className="stage">
       {screens.map((screen) => (
         <button
           key={screen.id}
           className={cx("stageScreen", selected.includes(screen.id) && "selected", screen.online && "online")}
-          style={{ left: screen.x, top: screen.y, width: screen.width * 18, height: screen.height * 18 }}
-          onClick={() => onToggle(screen.id)}
+          style={{ left: positions[screen.id]?.x ?? screen.x, top: positions[screen.id]?.y ?? screen.y, width: screen.width * 18, height: screen.height * 18 }}
+          onClick={() => {
+            if (skipClickRef.current) return;
+            onToggle(screen.id);
+          }}
           onPointerDown={(event) => {
+            if (!editable) return;
             const rect = event.currentTarget.getBoundingClientRect();
-            dragRef.current = { id: screen.id, dx: event.clientX - rect.left, dy: event.clientY - rect.top };
+            dragRef.current = { id: screen.id, dx: event.clientX - rect.left, dy: event.clientY - rect.top, moved: false, x: screen.x, y: screen.y };
             event.currentTarget.setPointerCapture(event.pointerId);
           }}
           onPointerMove={(event) => move(screen, event)}
-          onPointerUp={() => (dragRef.current = null)}
+          onPointerUp={() => void endDrag(screen)}
+          onPointerCancel={() => void endDrag(screen)}
         >
           <strong>{screen.name}</strong>
           <span>{screen.width}x{screen.height}</span>
@@ -565,11 +710,57 @@ function Stage({ screens, selected, onToggle, editable = false }: { screens: Scr
   );
 }
 
-function MediaGrid({ media, activeId, onPick }: { media: Media[]; activeId: string; onPick: (id: string) => void }) {
+function MediaTabs({
+  value,
+  onChange,
+  counts,
+}: {
+  value: "all" | "image" | "video" | "audio";
+  onChange: (value: "all" | "image" | "video" | "audio") => void;
+  counts: Media[];
+}) {
+  const count = (type: "all" | "image" | "video" | "audio") =>
+    type === "all" ? counts.length : counts.filter((media) => media.type === type).length;
+  const tabs: Array<["all" | "image" | "video" | "audio", string]> = [
+    ["all", "Tous"],
+    ["image", "Images"],
+    ["video", "Videos"],
+    ["audio", "Audio"],
+  ];
+
   return (
-    <div className="mediaGrid">
+    <div className="mediaTabs">
+      {tabs.map(([type, label]) => (
+        <button key={type} className={cx(value === type && "active")} onClick={() => onChange(type)}>
+          {label}
+          <span>{count(type)}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function MediaGrid({
+  media,
+  activeId,
+  onPick,
+  compact = false,
+  deck = false,
+}: {
+  media: Media[];
+  activeId: string;
+  onPick: (id: string) => void;
+  compact?: boolean;
+  deck?: boolean;
+}) {
+  if (!media.length) {
+    return <div className="emptyState">Aucun media dans cette categorie.</div>;
+  }
+
+  return (
+    <div className={cx("mediaGrid", compact && "compact", deck && "deckMediaGrid")}>
       {media.map((item) => (
-        <button key={item.id} className={cx("mediaCard", activeId === item.id && "selected")} onClick={() => onPick(item.id)}>
+        <button key={item.id} className={cx("mediaCard", deck && "deckMediaKey", activeId === item.id && "selected")} onClick={() => onPick(item.id)}>
           {item.type === "image" && <img src={`${API}${item.url}`} alt="" />}
           {item.type === "video" && <video src={`${API}${item.url}`} muted />}
           {item.type === "audio" && <div className="audioTile">AUDIO</div>}
@@ -603,13 +794,14 @@ function PasswordForm() {
   const [message, setMessage] = useState("");
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     await api("/api/v1/settings/password", {
       method: "POST",
       body: JSON.stringify({ currentPassword: form.get("currentPassword"), nextPassword: form.get("nextPassword") }),
     });
     setMessage("Mot de passe change.");
-    event.currentTarget.reset();
+    formElement.reset();
   }
   return (
     <form className="formGrid" onSubmit={submit}>

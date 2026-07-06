@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { use, useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333";
+const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
 
 type ScreenState = {
   mode: "off" | "boot" | "color" | "media" | "message" | "stream";

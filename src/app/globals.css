@@ -44,6 +44,23 @@ button {
   cursor: pointer;
 }
 
+button,
+.panel,
+.stat,
+.screenCard,
+.groupCard,
+.mediaCard,
+.concertCard,
+.stageScreen,
+.modulePanel {
+  transition:
+    transform .18s ease,
+    border-color .18s ease,
+    background .18s ease,
+    box-shadow .18s ease,
+    filter .18s ease;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: .54;
@@ -281,10 +298,20 @@ input[type="color"] {
 
 .primary:hover {
   filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(255, 106, 0, .18);
 }
 
 .ghost {
   background: #121210;
+}
+
+.ghost:hover,
+.buttonGrid button:hover,
+.groupStrip button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(244, 178, 59, .45);
+  background: #181816;
 }
 
 .danger {
@@ -381,6 +408,10 @@ input[type="color"] {
 
 .panel {
   padding: 18px;
+}
+
+.panel:hover {
+  border-color: #3f3b30;
 }
 
 .panel h3,
@@ -506,6 +537,47 @@ code {
   background: linear-gradient(180deg, var(--surface-2), #10100f);
 }
 
+.screenSelect {
+  display: grid;
+  gap: 10px;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.screenActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.screenDelete,
+.screenLink {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: #11110f;
+  font-weight: 850;
+}
+
+.screenLink {
+  color: var(--gold);
+  border-color: rgba(244, 178, 59, .28);
+}
+
+.screenLink.copied {
+  color: #10100b;
+  border-color: rgba(19, 209, 141, .55);
+  background: linear-gradient(180deg, #48e6ae, #13d18d);
+}
+
 .screenCard strong,
 .screenCard span {
   display: block;
@@ -564,6 +636,52 @@ code {
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
 }
 
+.mediaLibrary {
+  display: grid;
+  gap: 12px;
+}
+
+.mediaTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  background: #0d0d0c;
+}
+
+.mediaTabs button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  padding: 0 12px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 850;
+}
+
+.mediaTabs button:hover,
+.mediaTabs button.active {
+  color: var(--text);
+  border-color: rgba(244, 178, 59, .36);
+  background: rgba(244, 178, 59, .09);
+}
+
+.mediaTabs span {
+  min-width: 22px;
+  min-height: 22px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(244, 178, 59, .12);
+  font-size: 11px;
+}
+
 .mediaLayout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(340px, 440px);
@@ -580,6 +698,35 @@ code {
   border-radius: 6px;
   object-fit: cover;
   background: #050505;
+}
+
+.mediaGrid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.mediaGrid.compact .mediaCard {
+  min-height: 0;
+  padding: 10px;
+}
+
+.mediaGrid.compact .mediaCard strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.emptyState {
+  min-height: 128px;
+  display: grid;
+  place-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #0d0d0c;
 }
 
 .audioTile {
@@ -670,6 +817,15 @@ code {
   overflow: hidden;
   background: linear-gradient(180deg, #181817, #090908);
   box-shadow: inset 0 -10px 24px rgba(0, 0, 0, .28);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.stageScreen:active {
+  cursor: grabbing;
+  transform: scale(1.015);
+  z-index: 5;
 }
 
 .stageScreen.online::after {
@@ -721,7 +877,168 @@ code {
 }
 
 .commandPage {
-  max-width: 1180px;
+  max-width: none;
+}
+
+.console {
+  display: grid;
+  grid-template-columns: minmax(230px, .75fr) minmax(320px, 1fr) minmax(52vw, 2.35fr);
+  grid-template-areas:
+    "power color media"
+    "effects stream media";
+  gap: 14px;
+  align-items: stretch;
+}
+
+.modulePanel {
+  min-height: 220px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  padding: 16px;
+  background: linear-gradient(180deg, #131311, #0d0d0c);
+  animation: moduleIn .2s ease both;
+}
+
+.modulePanel:hover {
+  transform: translateY(-2px);
+  border-color: rgba(244, 178, 59, .38);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .22);
+}
+
+.powerModule {
+  grid-area: power;
+}
+
+.colorModule {
+  grid-area: color;
+}
+
+.mediaModule {
+  grid-area: media;
+}
+
+.mediaModule .mediaPreview img,
+.mediaModule .mediaPreview video {
+  min-height: 46vh;
+  max-height: 58vh;
+}
+
+.mediaModule .mediaPreview.empty {
+  min-height: 46vh;
+}
+
+.mediaModule .mediaGrid.compact {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  max-height: 260px;
+}
+
+.mediaModule .mediaCard img,
+.mediaModule .mediaCard video,
+.mediaModule .audioTile {
+  aspect-ratio: 16 / 10;
+}
+
+.effectsModule {
+  grid-area: effects;
+}
+
+.streamModule {
+  grid-area: stream;
+}
+
+.moduleTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.colorConsole {
+  display: grid;
+  grid-template-columns: auto minmax(120px, 1fr);
+  gap: 12px;
+  align-items: center;
+}
+
+.colorPreview {
+  min-height: 72px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.colorModule .primary {
+  grid-column: 1 / -1;
+}
+
+.presetGrid {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.presetGrid button {
+  min-height: 34px;
+  border: 1px solid rgba(255, 255, 255, .18);
+  border-radius: 8px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .18);
+}
+
+.presetGrid button:hover {
+  transform: translateY(-2px) scale(1.04);
+  border-color: var(--gold);
+}
+
+.messageConsole {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.messageConsole button,
+.fitSwitch button {
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--text);
+  background: #11110f;
+  font-weight: 850;
+}
+
+.fitSwitch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fitSwitch button.active {
+  border-color: rgba(244, 178, 59, .55);
+  color: var(--gold);
+  background: rgba(244, 178, 59, .1);
+}
+
+.streamModule video {
+  min-height: 160px;
+}
+
+.streamStatus {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #0a0a09;
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .controlPanel {
@@ -736,7 +1053,7 @@ code {
 .controlPanel.wide {
   position: static;
   width: 100%;
-  max-width: 900px;
+  max-width: none;
 }
 
 .selectedBox {
@@ -771,6 +1088,124 @@ code {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
+}
+
+.deckGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.deckKey {
+  position: relative;
+  min-height: 116px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  border: 1px solid #3a362d;
+  border-radius: 10px;
+  padding: 14px 10px;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 178, 59, .13), transparent 48%),
+    linear-gradient(180deg, #24231f, #0a0a09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    inset 0 -12px 22px rgba(0, 0, 0, .34),
+    0 10px 20px rgba(0, 0, 0, .28);
+  text-align: center;
+}
+
+.deckKey::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(255, 255, 255, .04);
+  border-radius: 7px;
+  pointer-events: none;
+}
+
+.deckKey svg {
+  color: var(--gold);
+  filter: drop-shadow(0 0 12px rgba(244, 178, 59, .22));
+}
+
+.deckKey strong,
+.deckKey span {
+  display: block;
+}
+
+.deckKey strong {
+  font-size: 15px;
+}
+
+.deckKey span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.deckKey:hover {
+  transform: translateY(-3px);
+  border-color: rgba(244, 178, 59, .65);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .1),
+    inset 0 -12px 22px rgba(0, 0, 0, .34),
+    0 18px 34px rgba(0, 0, 0, .34),
+    0 0 0 3px rgba(244, 178, 59, .08);
+}
+
+.deckKey:active {
+  transform: translateY(1px) scale(.99);
+}
+
+.primaryDeck {
+  border-color: rgba(244, 178, 59, .72);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, .22), transparent 42%),
+    linear-gradient(180deg, #ffb83e, #dc6100);
+  color: #160d03;
+}
+
+.primaryDeck svg,
+.primaryDeck span {
+  color: #160d03;
+}
+
+.deckMediaGrid {
+  gap: 12px;
+}
+
+.mediaGrid.compact.deckMediaGrid {
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  max-height: 42vh;
+}
+
+.deckMediaKey {
+  min-height: 156px;
+  border-radius: 10px;
+  padding: 10px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(244, 178, 59, .1), transparent 46%),
+    linear-gradient(180deg, #201f1b, #090908);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .07),
+    inset 0 -12px 22px rgba(0, 0, 0, .34),
+    0 12px 22px rgba(0, 0, 0, .24);
+}
+
+.deckMediaKey.selected {
+  border-color: var(--gold);
+  box-shadow:
+    inset 0 0 0 1px rgba(244, 178, 59, .38),
+    0 0 0 3px rgba(244, 178, 59, .13),
+    0 16px 28px rgba(0, 0, 0, .3);
+}
+
+.deckMediaKey img,
+.deckMediaKey video,
+.deckMediaKey .audioTile {
+  border-radius: 8px;
 }
 
 .controlPanel label {
@@ -875,6 +1310,17 @@ code {
   to { transform: translateY(500%); }
 }
 
+@keyframes moduleIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (max-width: 1180px) {
   .shell {
     grid-template-columns: 88px minmax(0, 1fr);
@@ -911,6 +1357,18 @@ code {
 
   .formGrid {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .console {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas:
+      "power color"
+      "effects stream"
+      "media media";
+  }
+
+  .mediaGrid.compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -963,5 +1421,19 @@ code {
   .selectionFooter {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .console,
+  .colorConsole {
+    grid-template-columns: 1fr;
+  }
+
+  .console {
+    grid-template-areas:
+      "power"
+      "color"
+      "media"
+      "effects"
+      "stream";
   }
 }
