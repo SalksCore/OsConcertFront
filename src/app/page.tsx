@@ -962,12 +962,15 @@ export default function Home() {
                     <article className="monitorTile" key={screen.id}>
                       <div className="monitorTileHead">
                         <div>
-                          <strong>{screen.name}</strong>
-                          <span>{screen.width} x {screen.height} blocs</span>
+                              <span>{screen.width} x {screen.height} blocs</span>
                         </div>
                         <b className={screen.online ? "online" : ""}>{screen.online ? "online" : "offline"}</b>
                       </div>
                       <div className="monitorFrame">
+                            <div className="monitorFrameLabel">
+                              <strong>{screen.name}</strong>
+                              <span>{screen.id}</span>
+                            </div>
                         <iframe
                           src={`/screen/${screen.id}`}
                           title={screen.name}
@@ -989,17 +992,6 @@ export default function Home() {
                     ) : (
                       <div className="monitorStreamEmpty">Aucun stream actif pour le moment.</div>
                     )}
-                  </div>
-                </Panel>
-
-                <Panel title="Dernieres actions" icon={<Activity size={18} />}>
-                  <div className="monitorEvents">
-                    {snapshot.events.slice(0, 10).map((event) => (
-                      <div className="item" key={event.id}>
-                        <strong>{event.type}</strong>
-                        <span>{new Date(event.createdAt).toLocaleTimeString("fr-FR")}</span>
-                      </div>
-                    ))}
                   </div>
                 </Panel>
               </aside>
