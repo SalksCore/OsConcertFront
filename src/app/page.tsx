@@ -137,6 +137,14 @@ async function api(path: string, init?: RequestInit) {
   return response.json();
 }
 
+const MEDIA_EXTS = /\.(jpe?g|png|gif|webp|bmp|svg|avif|mov|qt|mp4|m4v|webm|mkv|avi|ogv|mp3|wav|ogg|oga|m4a|aac|flac)$/i;
+
+// Accepte un fichier media par son mime OU son extension (les .mov arrivent
+// souvent avec un type vide ou application/octet-stream selon le navigateur).
+function isMediaFile(file: File) {
+  return /^(image|video|audio)\//.test(file.type) || MEDIA_EXTS.test(file.name);
+}
+
 function setAuthCookie(value: boolean) {
   document.cookie = `concert_os_auth=${value ? "1" : ""}; path=/; max-age=${value ? 60 * 60 * 24 * 30 : 0}; SameSite=Lax`;
 }
@@ -710,7 +718,7 @@ export default function Home() {
             <Panel title="Uploader image, video ou son (plusieurs a la fois)" icon={<Upload size={18} />}>
               <form className="uploadRow" onSubmit={uploadMedia}>
                 <input name="name" placeholder="Nom visible (fichier unique)" />
-                <input name="file" type="file" accept="image/*,video/*,audio/*" multiple required />
+                <input name="file" type="file" accept="image/*,video/*,audio/*,.mov,.qt,.mkv,.m4v,.avi" multiple required />
                 <button className="primary"><Upload size={16} /> Uploader</button>
               </form>
               <div
@@ -720,7 +728,7 @@ export default function Home() {
                 onDrop={(e) => {
                   e.preventDefault();
                   setDragging(false);
-                  const files = Array.from(e.dataTransfer.files).filter((f) => /^(image|video|audio)\//.test(f.type));
+                  const files = Array.from(e.dataTransfer.files).filter(isMediaFile);
                   if (files.length) void uploadFiles(files);
                 }}
               >

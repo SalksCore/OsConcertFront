@@ -1484,6 +1484,21 @@ code {
     conic-gradient(from 45deg, #000 0 25%, #f4b23b 0 50%, #101010 0 75%, #fff 0);
   background-size: 9vw 9vw, 9vw 9vw, 100% 100%;
   color: #fff;
+  animation: testShift 6s linear infinite;
+}
+
+/* Sweeping scan bar so the test pattern is visibly alive. */
+.viewerTest::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 14vh;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .28), transparent);
+  animation: testScan 3s linear infinite;
 }
 
 .testGrid {
@@ -1491,6 +1506,7 @@ code {
   inset: 7%;
   border: clamp(3px, .8vmin, 12px) solid #fff;
   box-shadow: 0 0 0 clamp(3px, .8vmin, 12px) #000, inset 0 0 0 clamp(2px, .5vmin, 8px) #000;
+  animation: testGridPulse 1.6s ease-in-out infinite;
 }
 
 .testCenter {
@@ -1503,6 +1519,27 @@ code {
   border: clamp(2px, .45vmin, 7px) solid var(--gold);
   background: rgba(0, 0, 0, .78);
   text-align: center;
+  animation: testCenterPulse 2s ease-in-out infinite;
+}
+
+@keyframes testShift {
+  from { background-position: 0 0, 0 0, 0 0; }
+  to { background-position: 9vw 0, 0 9vw, 0 0; }
+}
+
+@keyframes testScan {
+  from { transform: translateY(-14vh); }
+  to { transform: translateY(100vh); }
+}
+
+@keyframes testGridPulse {
+  0%, 100% { border-color: #fff; }
+  50% { border-color: var(--gold); }
+}
+
+@keyframes testCenterPulse {
+  0%, 100% { transform: scale(1); border-color: var(--gold); box-shadow: 0 0 0 0 rgba(244, 178, 59, 0); }
+  50% { transform: scale(1.03); border-color: #fff; box-shadow: 0 0 42px rgba(244, 178, 59, .45); }
 }
 
 .testCenter span,
