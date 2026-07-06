@@ -191,6 +191,8 @@ export default function Home() {
   const selectedScreens = screens.filter((screen) => selected.includes(screen.id));
   const activeMedia = snapshot.media.find((media) => media.id === activeMediaId) || snapshot.media[0];
   const filteredMedia = snapshot.media.filter((media) => mediaFilter === "all" || media.type === mediaFilter);
+  const animationIsActive = (animation: AnimationMode) =>
+    selectedScreens.length > 0 && selectedScreens.every((screen) => (screen.state.animation || "none") === animation);
 
   async function login(event: FormEvent) {
     event.preventDefault();
@@ -241,6 +243,40 @@ export default function Home() {
     setCommandStatus(`${action} envoye vers ${selected.length} ecran(s).`);
   }
 
+  async function commandStates(statesByScreen: Record<string, ScreenState>, action: string, label: string) {
+    setSnapshot((current) => ({
+      ...current,
+      screens: current.screens.map((screen) =>
+        statesByScreen[screen.id] ? { ...screen, state: statesByScreen[screen.id] } : screen
+      ),
+    }));
+    setCommandStatus(`${label} envoye vers ${Object.keys(statesByScreen).length} ecran(s)...`);
+    await api("/api/v1/command", { method: "POST", body: JSON.stringify({ screenIds: Object.keys(statesByScreen), statesByScreen, action }) });
+    setCommandStatus(`${label} actif sur ${Object.keys(statesByScreen).length} ecran(s).`);
+  }
+
+  async function toggleAnimation(animation: AnimationMode) {
+    if (!selected.length) {
+      setCommandStatus("Aucun ecran selectionne.");
+      setView("live");
+      return;
+    }
+    const startAt = Date.now() + (selected.length > 1 ? 320 : 0);
+    const updatedAt = new Date().toISOString();
+    const statesByScreen = Object.fromEntries(
+      selectedScreens.map((screen) => [
+        screen.id,
+        {
+          ...screen.state,
+          animation: screen.state.animation === animation ? "none" : animation,
+          updatedAt,
+          startAt,
+        },
+      ])
+    );
+    await commandStates(statesByScreen, `toggle-${animation}`, animation);
+  }
+
   async function screenTest() {
     if (!selected.length) {
       setCommandStatus("Aucun ecran selectionne.");
@@ -267,15 +303,7 @@ export default function Home() {
         },
       ])
     );
-    setSnapshot((current) => ({
-      ...current,
-      screens: current.screens.map((screen) =>
-        statesByScreen[screen.id] ? { ...screen, state: statesByScreen[screen.id] } : screen
-      ),
-    }));
-    setCommandStatus(`Mire test envoyee vers ${selected.length} ecran(s)...`);
-    await api("/api/v1/command", { method: "POST", body: JSON.stringify({ screenIds: selected, statesByScreen, action: "screen-test" }) });
-    setCommandStatus(`Mire test active sur ${selected.length} ecran(s).`);
+    await commandStates(statesByScreen, "screen-test", "Screen test");
   }
 
   function buildStageMediaStates(baseState: ScreenState): Record<string, ScreenState> {
@@ -688,6 +716,7 @@ export default function Home() {
                     <button className="deckKey" onClick={() => command({ mode: "boot" }, "boot")}><Power size={24} /><strong>Boot</strong><span>Demarrage OS</span></button>
                     <button className="deckKey" onClick={() => command({ mode: "boot", message: "Restarting" }, "restart")}><RotateCw size={24} /><strong>Restart</strong><span>Relance ecran</span></button>
                     <button className="deckKey" onClick={() => command({ mode: "standby" }, "standby")}><RadioTower size={24} /><strong>Standby</strong><span>Logo scintillant</span></button>
+                    <button className="deckKey" onClick={screenTest}><Clapperboard size={24} /><strong>Screen test</strong><span>ID + position</span></button>
                     <button className="deckKey danger" onClick={() => command({ mode: "off" }, "off")}><ScreenShareOff size={24} /><strong>Off</strong><span>Noir complet</span></button>
                   </div>
                 </div>
@@ -727,11 +756,11 @@ export default function Home() {
                   <div className="deckGrid compactDeck">
                     {(["pulse", "strobe", "glitch", "wipe", "bars", "zoom"] as AnimationMode[]).map((animation) => (
                       <button
-                        className="deckKey"
+                        className={cx("deckKey", animationIsActive(animation) && "activeDeck")}
                         key={`media-${animation}`}
-                        onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit, animation }, `media-${animation}`)}
+                        onClick={() => toggleAnimation(animation)}
                       >
-                        <WandSparkles size={20} /><strong>{animation}</strong><span>Media FX</span>
+                        <WandSparkles size={20} /><strong>{animation}</strong><span>Toggle FX</span>
                       </button>
                     ))}
                   </div>
@@ -740,16 +769,15 @@ export default function Home() {
                 <div className="modulePanel effectsModule">
                   <p className="moduleTitle"><WandSparkles size={16} /> Animations rapides</p>
                   <div className="deckGrid">
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "none" }, "none")}><Palette size={24} /><strong>Fixe</strong><span>Couleur stable</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "pulse" }, "pulse")}><WandSparkles size={24} /><strong>Pulse</strong><span>Respiration</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "scan" }, "scan")}><RadioTower size={24} /><strong>Scan</strong><span>Balayage</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "strobe" }, "strobe")}><WandSparkles size={24} /><strong>Strobe</strong><span>Flash rythme</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "flash" }, "flash")}><WandSparkles size={24} /><strong>Flash</strong><span>Impact blanc</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "glitch" }, "glitch")}><WandSparkles size={24} /><strong>Glitch</strong><span>Decrochage</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "wipe" }, "wipe")}><WandSparkles size={24} /><strong>Wipe</strong><span>Rideau scene</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "bars" }, "bars")}><WandSparkles size={24} /><strong>Bars</strong><span>Lignes LED</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "zoom" }, "zoom")}><WandSparkles size={24} /><strong>Zoom</strong><span>Punch visuel</span></button>
-                    <button className="deckKey" onClick={screenTest}><Clapperboard size={24} /><strong>Screen test</strong><span>ID + position</span></button>
+                    <button className={cx("deckKey", animationIsActive("none") && "activeDeck")} onClick={() => toggleAnimation("none")}><Palette size={24} /><strong>Stop FX</strong><span>Retire effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("pulse") && "activeDeck")} onClick={() => toggleAnimation("pulse")}><WandSparkles size={24} /><strong>Pulse</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("scan") && "activeDeck")} onClick={() => toggleAnimation("scan")}><RadioTower size={24} /><strong>Scan</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("strobe") && "activeDeck")} onClick={() => toggleAnimation("strobe")}><WandSparkles size={24} /><strong>Strobe</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("flash") && "activeDeck")} onClick={() => toggleAnimation("flash")}><WandSparkles size={24} /><strong>Flash</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("glitch") && "activeDeck")} onClick={() => toggleAnimation("glitch")}><WandSparkles size={24} /><strong>Glitch</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("wipe") && "activeDeck")} onClick={() => toggleAnimation("wipe")}><WandSparkles size={24} /><strong>Wipe</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("bars") && "activeDeck")} onClick={() => toggleAnimation("bars")}><WandSparkles size={24} /><strong>Bars</strong><span>Toggle effet</span></button>
+                    <button className={cx("deckKey", animationIsActive("zoom") && "activeDeck")} onClick={() => toggleAnimation("zoom")}><WandSparkles size={24} /><strong>Zoom</strong><span>Toggle effet</span></button>
                   </div>
                 </div>
 
