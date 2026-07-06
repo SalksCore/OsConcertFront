@@ -238,18 +238,18 @@ button:disabled {
 
 .main {
   min-width: 0;
-  padding: 26px;
+  padding: 20px;
 }
 
 .topbar {
   position: relative;
-  min-height: 76px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  margin: -26px -26px 24px;
-  padding: 14px 26px;
+  gap: 14px;
+  margin: -20px -20px 16px;
+  padding: 10px 20px;
   border-bottom: 1px solid var(--line);
   background: rgba(10, 10, 9, .96);
 }
@@ -259,7 +259,7 @@ button:disabled {
   position: absolute;
   left: 276px;
   right: 0;
-  top: 75px;
+  top: 63px;
   height: 2px;
   background: linear-gradient(90deg, var(--orange), var(--gold), transparent 72%);
 }
@@ -354,7 +354,7 @@ input[type="color"] {
 
 .page {
   display: grid;
-  gap: 18px;
+  gap: 14px;
 }
 
 .hero,
@@ -372,9 +372,9 @@ input[type="color"] {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 24px;
-  min-height: 152px;
-  padding: 28px 30px;
+  gap: 18px;
+  min-height: 132px;
+  padding: 20px 22px;
   background:
     linear-gradient(90deg, rgba(255, 106, 0, .1), transparent 62%),
     linear-gradient(180deg, #171714, #11110f);
@@ -389,12 +389,12 @@ input[type="color"] {
 .stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .stat {
-  min-height: 106px;
-  padding: 18px;
+  min-height: 92px;
+  padding: 14px 16px;
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
 }
 
@@ -419,11 +419,11 @@ input[type="color"] {
 .regie {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
-  gap: 16px;
+  gap: 14px;
 }
 
 .panel {
-  padding: 18px;
+  padding: 16px;
 }
 
 .panel:hover {
@@ -435,9 +435,9 @@ input[type="color"] {
   display: flex;
   align-items: center;
   gap: 9px;
-  min-height: 32px;
-  margin: 0 0 16px;
-  padding-bottom: 12px;
+  min-height: 28px;
+  margin: 0 0 12px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--line-soft);
   font-size: 15px;
 }
@@ -1058,22 +1058,22 @@ code {
 
 .console {
   display: grid;
-  grid-template-columns: minmax(230px, .75fr) minmax(320px, 1fr) minmax(52vw, 2.35fr);
+  grid-template-columns: minmax(210px, .72fr) minmax(300px, .95fr) minmax(0, 1.9fr);
   grid-template-areas:
     "power color media"
     "effects stream media";
-  gap: 14px;
+  gap: 12px;
   align-items: stretch;
 }
 
 .modulePanel {
-  min-height: 220px;
+  min-height: 180px;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 12px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
   background: linear-gradient(180deg, #131311, #0d0d0c);
   animation: moduleIn .2s ease both;
 }
@@ -1098,12 +1098,12 @@ code {
 
 .mediaModule .mediaPreview img,
 .mediaModule .mediaPreview video {
-  min-height: 46vh;
-  max-height: 58vh;
+  min-height: 40vh;
+  max-height: 50vh;
 }
 
 .mediaModule .mediaPreview.empty {
-  min-height: 46vh;
+  min-height: 40vh;
 }
 
 .mediaModule .mediaGrid.compact {
@@ -1203,12 +1203,12 @@ code {
 }
 
 .streamModule video {
-  min-height: 160px;
+  min-height: 144px;
 }
 
 .monitorPage {
   display: grid;
-  gap: 14px;
+  gap: 12px;
   max-width: none;
 }
 
@@ -1233,14 +1233,14 @@ code {
 .monitorLayout {
   display: grid;
   grid-template-columns: minmax(0, 2.1fr) minmax(290px, .9fr);
-  gap: 14px;
+  gap: 12px;
   align-items: start;
 }
 
 .monitorPanel,
 .monitorAside {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .monitorScreensPanel {
@@ -1272,7 +1272,7 @@ code {
 .monitorGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
 }
 
 .monitorEmpty {
@@ -1288,8 +1288,8 @@ code {
 
 .monitorTile {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
   border: 1px solid var(--line-soft);
   border-radius: 12px;
   background: linear-gradient(180deg, #121211, #0a0a09);
