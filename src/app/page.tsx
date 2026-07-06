@@ -154,6 +154,8 @@ export default function Home() {
   const [selected, setSelected] = useState<string[]>([]);
   const [color, setColor] = useState("#ff9f1a");
   const [activeMediaId, setActiveMediaId] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; failed: number; finished?: boolean } | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "audio">("image");
   const [mediaFit, setMediaFit] = useState<"contain" | "stretch" | "stage">("contain");
   const [messageText, setMessageText] = useState("CONCERT OS");
@@ -420,10 +422,56 @@ export default function Home() {
   async function uploadMedia(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formElement = event.currentTarget;
-    const form = new FormData(formElement);
-    const media = await api("/api/v1/media", { method: "POST", body: form });
-    setActiveMediaId(media.id);
+    const nameInput = formElement.elements.namedItem("name") as HTMLInputElement | null;
+    const fileInput = formElement.elements.namedItem("file") as HTMLInputElement | null;
+    const files = Array.from(fileInput?.files || []);
+    if (!files.length) return;
+    const customName = nameInput?.value.trim() || "";
+    await uploadFiles(files, customName);
     formElement.reset();
+  }
+
+  async function deleteMedia(media: Media) {
+    if (!window.confirm(`Supprimer le media "${media.name}" ?`)) return;
+    await api(`/api/v1/media/${media.id}`, { method: "DELETE" });
+    if (activeMediaId === media.id) setActiveMediaId("");
+  }
+
+  async function uploadFiles(files: File[], customName = "") {
+    const total = files.length;
+    let done = 0;
+    let failed = 0;
+    let lastId = "";
+    setUploadProgress({ done: 0, total, failed: 0 });
+
+    const queue = [...files];
+    const concurrency = Math.min(4, total);
+
+    async function worker() {
+      for (;;) {
+        const file = queue.shift();
+        if (!file) return;
+        const form = new FormData();
+        // Un seul nom personnalise n'a de sens que pour un fichier unique ;
+        // sinon on garde le nom d'origine de chaque fichier.
+        if (customName && total === 1) form.append("name", customName);
+        form.append("file", file);
+        try {
+          const media = await api("/api/v1/media", { method: "POST", body: form });
+          lastId = media.id;
+        } catch {
+          failed += 1;
+        } finally {
+          done += 1;
+          setUploadProgress({ done, total, failed });
+        }
+      }
+    }
+
+    await Promise.all(Array.from({ length: concurrency }, worker));
+    if (lastId) setActiveMediaId(lastId);
+    setUploadProgress({ done, total, failed, finished: true });
+    setTimeout(() => setUploadProgress(null), 4000);
   }
 
   async function startStream() {
@@ -659,17 +707,42 @@ export default function Home() {
 
         {view === "media" && (
           <section className="page">
-            <Panel title="Uploader image, video ou son" icon={<Upload size={18} />}>
+            <Panel title="Uploader image, video ou son (plusieurs a la fois)" icon={<Upload size={18} />}>
               <form className="uploadRow" onSubmit={uploadMedia}>
-                <input name="name" placeholder="Nom visible" />
-                <input name="file" type="file" accept="image/*,video/*,audio/*" required />
+                <input name="name" placeholder="Nom visible (fichier unique)" />
+                <input name="file" type="file" accept="image/*,video/*,audio/*" multiple required />
                 <button className="primary"><Upload size={16} /> Uploader</button>
               </form>
+              <div
+                className={cx("dropZone", dragging && "dragging")}
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragging(false);
+                  const files = Array.from(e.dataTransfer.files).filter((f) => /^(image|video|audio)\//.test(f.type));
+                  if (files.length) void uploadFiles(files);
+                }}
+              >
+                <Upload size={18} /> Glisse-depose tes fichiers ici (ou selectionne-en plusieurs ci-dessus)
+              </div>
+              {uploadProgress && (
+                <div className="uploadStatus">
+                  <div className="uploadBar">
+                    <div className="uploadBarFill" style={{ width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%` }} />
+                  </div>
+                  <p className="muted">
+                    {uploadProgress.finished
+                      ? `Termine : ${uploadProgress.done - uploadProgress.failed}/${uploadProgress.total} uploades${uploadProgress.failed ? ` — ${uploadProgress.failed} echec(s)` : ""}`
+                      : `Upload en cours… ${uploadProgress.done}/${uploadProgress.total}${uploadProgress.failed ? ` (${uploadProgress.failed} echec(s))` : ""}`}
+                  </p>
+                </div>
+              )}
             </Panel>
             <div className="mediaLayout">
               <div className="mediaLibrary">
                 <MediaTabs value={mediaFilter} onChange={setMediaFilter} counts={snapshot.media} />
-                <MediaGrid media={filteredMedia} activeId={activeMediaId} onPick={setActiveMediaId} />
+                <MediaGrid media={filteredMedia} activeId={activeMediaId} onPick={setActiveMediaId} onDelete={deleteMedia} />
               </div>
               <Panel title="Previsualisation" icon={<Play size={18} />}>
                 <MediaPreview media={activeMedia} />
@@ -978,12 +1051,14 @@ function MediaGrid({
   media,
   activeId,
   onPick,
+  onDelete,
   compact = false,
   deck = false,
 }: {
   media: Media[];
   activeId: string;
   onPick: (id: string) => void;
+  onDelete?: (media: Media) => void;
   compact?: boolean;
   deck?: boolean;
 }) {
@@ -994,13 +1069,24 @@ function MediaGrid({
   return (
     <div className={cx("mediaGrid", compact && "compact", deck && "deckMediaGrid")}>
       {media.map((item) => (
-        <button key={item.id} className={cx("mediaCard", deck && "deckMediaKey", activeId === item.id && "selected")} onClick={() => onPick(item.id)}>
-          {item.type === "image" && <img src={apiAsset(item.url)} alt="" />}
-          {item.type === "video" && <video src={apiAsset(item.url)} muted />}
-          {item.type === "audio" && <div className="audioTile">AUDIO</div>}
-          <strong>{item.name}</strong>
-          <span>{item.type}</span>
-        </button>
+        <div key={item.id} className="mediaCardWrap">
+          <button className={cx("mediaCard", deck && "deckMediaKey", activeId === item.id && "selected")} onClick={() => onPick(item.id)}>
+            {item.type === "image" && <img src={apiAsset(item.url)} alt="" />}
+            {item.type === "video" && <video src={apiAsset(item.url)} muted />}
+            {item.type === "audio" && <div className="audioTile">AUDIO</div>}
+            <strong>{item.name}</strong>
+            <span>{item.type}</span>
+          </button>
+          {onDelete && (
+            <button
+              className="mediaDelete"
+              title="Supprimer ce media"
+              onClick={(event) => { event.stopPropagation(); onDelete(item); }}
+            >
+              <Trash2 size={14} />
+            </button>
+          )}
+        </div>
       ))}
     </div>
   );

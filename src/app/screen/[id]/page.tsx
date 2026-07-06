@@ -94,7 +94,13 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
   const [syncError, setSyncError] = useState("");
 
   function applyState(nextState: ScreenState) {
-    const delay = Math.max(0, (nextState.startAt || 0) - Date.now());
+    // startAt is an absolute server timestamp used to sync several screens.
+    // We only honor it when it lands in a short, plausible window: this keeps
+    // the intended multi-screen sync (a few hundred ms) while preventing a
+    // device whose clock is out of sync from stalling every update for
+    // seconds or minutes. Anything else is applied immediately.
+    const raw = (nextState.startAt || 0) - Date.now();
+    const delay = raw > 0 && raw < 2500 ? raw : 0;
     if (!delay) {
       setState(nextState);
       return;
@@ -145,6 +151,31 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       events.close();
     };
   }, [id]);
+
+  // Frames only arrive over SSE ("stream-frame"). Behind an HTTPS->HTTP proxy
+  // (e.g. Vercel rewrites) that stream can be buffered and never reaches us,
+  // leaving the screen stuck on "WAITING STREAM". While in stream mode we also
+  // poll the last frame directly as a reliable fallback.
+  useEffect(() => {
+    if (state.mode !== "stream") return;
+    let active = true;
+    const pollFrame = async () => {
+      try {
+        const response = await fetch(`${apiBase()}/api/v1/screens/${id}/frame`, { cache: "no-store" });
+        if (!response.ok) return;
+        const data = await response.json();
+        if (active && data.frame) setFrame(data.frame);
+      } catch {
+        // Ignore: SSE may still be delivering frames.
+      }
+    };
+    pollFrame();
+    const timer = window.setInterval(pollFrame, 250);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [state.mode, id]);
 
   return (
     <main className={`viewer ${state.mode} ${state.animation || ""}`} style={{ background: state.mode === "color" ? state.color : undefined }}>
