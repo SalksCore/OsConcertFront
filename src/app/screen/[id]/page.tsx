@@ -13,15 +13,28 @@ function apiBase() {
 }
 
 type ScreenState = {
-  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby";
+  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test";
   color?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "audio";
   fit?: "contain" | "stretch" | "stage";
   layout?: StageMediaLayout;
-  animation?: "none" | "pulse" | "scan";
+  animation?: AnimationMode;
   message?: string;
   updatedAt?: string;
+  startAt?: number;
+  test?: ScreenTestInfo;
+};
+
+type AnimationMode = "none" | "pulse" | "scan" | "strobe" | "flash" | "glitch" | "wipe" | "bars" | "zoom";
+
+type ScreenTestInfo = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 type StageMediaLayout = {
@@ -80,11 +93,20 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
   const [connected, setConnected] = useState(false);
   const [syncError, setSyncError] = useState("");
 
+  function applyState(nextState: ScreenState) {
+    const delay = Math.max(0, (nextState.startAt || 0) - Date.now());
+    if (!delay) {
+      setState(nextState);
+      return;
+    }
+    window.setTimeout(() => setState(nextState), delay);
+  }
+
   async function refreshState() {
     try {
       const response = await fetch(`${apiBase()}/api/v1/screens/${id}/state`, { cache: "no-store" });
       if (response.ok) {
-        setState(await response.json());
+        applyState(await response.json());
         setSyncError("");
         return;
       }
@@ -103,7 +125,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       setSyncError("Ecran introuvable");
       return;
     }
-    setState(screen.state);
+    applyState(screen.state);
     setSyncError("");
   }
 
@@ -114,7 +136,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
     events.onopen = () => setConnected(true);
     events.onerror = () => setConnected(false);
     events.addEventListener("state", (event) => {
-      setState(JSON.parse((event as MessageEvent).data));
+      applyState(JSON.parse((event as MessageEvent).data));
       setConnected(true);
     });
     events.addEventListener("stream-frame", (event) => setFrame(JSON.parse((event as MessageEvent).data).frame));
@@ -131,12 +153,34 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       {state.mode === "boot" && <BootLoader key={state.updatedAt || state.message || "boot"} message={state.message} />}
       {state.mode === "standby" && <StandbyLogo />}
       {state.mode === "message" && <div className="viewerMessage">{state.message}</div>}
+      {state.mode === "test" && <ScreenTest test={state.test} />}
       {state.mode === "media" && state.mediaType === "image" && <StageMedia state={state} kind="image" />}
       {state.mode === "media" && state.mediaType === "video" && <StageMedia state={state} kind="video" />}
       {state.mode === "media" && state.mediaType === "audio" && <audio src={state.mediaUrl} autoPlay controls />}
       {state.mode === "stream" && frame && <img src={frame} alt="" />}
       {state.mode === "stream" && !frame && <div className="viewerMessage">WAITING STREAM</div>}
     </main>
+  );
+}
+
+function ScreenTest({ test }: { test?: ScreenTestInfo }) {
+  return (
+    <section className="viewerTest">
+      <div className="testGrid" />
+      <div className="testCenter">
+        <span>SCREEN TEST</span>
+        <strong>{test?.id || "unknown"}</strong>
+        <p>{test?.name || "Ecran"}</p>
+      </div>
+      <div className="testMeta">
+        <span>X {test?.x ?? 0}</span>
+        <span>Y {test?.y ?? 0}</span>
+        <span>{test?.width ?? 0} x {test?.height ?? 0} blocs</span>
+      </div>
+      <div className="testCorners">
+        <i>TL</i><i>TR</i><i>BL</i><i>BR</i>
+      </div>
+    </section>
   );
 }
 

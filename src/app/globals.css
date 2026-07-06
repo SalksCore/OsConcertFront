@@ -1378,6 +1378,88 @@ code {
   font-weight: 900;
 }
 
+.viewerTest {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, .08) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px),
+    conic-gradient(from 45deg, #000 0 25%, #f4b23b 0 50%, #101010 0 75%, #fff 0);
+  background-size: 9vw 9vw, 9vw 9vw, 100% 100%;
+  color: #fff;
+}
+
+.testGrid {
+  position: absolute;
+  inset: 7%;
+  border: clamp(3px, .8vmin, 12px) solid #fff;
+  box-shadow: 0 0 0 clamp(3px, .8vmin, 12px) #000, inset 0 0 0 clamp(2px, .5vmin, 8px) #000;
+}
+
+.testCenter {
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: clamp(4px, 1vmin, 14px);
+  max-width: 90vw;
+  padding: clamp(12px, 3vmin, 42px);
+  border: clamp(2px, .45vmin, 7px) solid var(--gold);
+  background: rgba(0, 0, 0, .78);
+  text-align: center;
+}
+
+.testCenter span,
+.testMeta span,
+.testCorners i {
+  color: var(--gold);
+  font-size: clamp(10px, min(2.2vw, 2.5vh), 34px);
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.testCenter strong {
+  font-size: clamp(18px, min(5.4vw, 6.4vh), 92px);
+  line-height: .95;
+  overflow-wrap: anywhere;
+}
+
+.testCenter p {
+  margin: 0;
+  font-size: clamp(13px, min(3.2vw, 3.8vh), 54px);
+  font-weight: 900;
+}
+
+.testMeta {
+  position: absolute;
+  left: 4vw;
+  right: 4vw;
+  bottom: 4vh;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: clamp(8px, 1.6vmin, 22px);
+  background: rgba(0, 0, 0, .74);
+}
+
+.testCorners {
+  position: absolute;
+  inset: 3vh 3vw;
+}
+
+.testCorners i {
+  position: absolute;
+  font-style: normal;
+}
+
+.testCorners i:nth-child(1) { left: 0; top: 0; }
+.testCorners i:nth-child(2) { right: 0; top: 0; }
+.testCorners i:nth-child(3) { left: 0; bottom: 0; }
+.testCorners i:nth-child(4) { right: 0; bottom: 0; }
+
 .viewer.off {
   background: #000;
 }
@@ -1585,11 +1667,17 @@ code {
 }
 
 .pulse::after,
-.scan::after {
+.scan::after,
+.strobe::after,
+.flash::after,
+.glitch::after,
+.wipe::after,
+.bars::after {
   content: "";
   position: fixed;
   inset: 0;
   pointer-events: none;
+  z-index: 12;
 }
 
 .pulse::after {
@@ -1601,6 +1689,43 @@ code {
   height: 22vh;
   background: linear-gradient(180deg, transparent, rgba(244, 178, 59, .48), transparent);
   animation: scan 1.5s linear infinite;
+}
+
+.strobe::after {
+  background: #fff;
+  mix-blend-mode: screen;
+  animation: strobe .18s steps(2, end) infinite;
+}
+
+.flash::after {
+  background: radial-gradient(circle, rgba(255, 255, 255, .95), rgba(244, 178, 59, .35) 42%, transparent 72%);
+  animation: flash .9s ease-in-out infinite;
+}
+
+.glitch::after {
+  background:
+    linear-gradient(0deg, transparent 0 38%, rgba(255, 0, 80, .35) 38% 42%, transparent 42% 68%, rgba(0, 210, 255, .32) 68% 72%, transparent 72%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, .08) 0 1px, transparent 1px 5px);
+  mix-blend-mode: screen;
+  animation: glitch .38s steps(3, end) infinite;
+}
+
+.wipe::after {
+  background: linear-gradient(90deg, transparent, rgba(244, 178, 59, .75), #fff, rgba(244, 178, 59, .75), transparent);
+  width: 28vw;
+  animation: wipe 1.1s ease-in-out infinite;
+}
+
+.bars::after {
+  background: repeating-linear-gradient(90deg, rgba(244, 178, 59, .42) 0 5vw, transparent 5vw 8vw);
+  animation: bars .8s linear infinite;
+}
+
+.zoom img,
+.zoom video,
+.zoom .viewerStageMedia img,
+.zoom .viewerStageMedia video {
+  animation: zoomPunch .72s ease-in-out infinite;
 }
 
 @keyframes bootbar {
@@ -1618,6 +1743,39 @@ code {
 @keyframes scan {
   from { transform: translateY(-100%); }
   to { transform: translateY(500%); }
+}
+
+@keyframes strobe {
+  0%, 38% { opacity: 0; }
+  39%, 100% { opacity: .92; }
+}
+
+@keyframes flash {
+  0%, 100% { opacity: 0; transform: scale(.78); }
+  38% { opacity: .98; transform: scale(1); }
+  52% { opacity: .18; transform: scale(1.16); }
+}
+
+@keyframes glitch {
+  0% { opacity: .2; transform: translateX(-2vw); }
+  35% { opacity: .8; transform: translateX(2vw); }
+  70% { opacity: .35; transform: translateY(1vh); }
+  100% { opacity: .65; transform: translateX(0); }
+}
+
+@keyframes wipe {
+  from { transform: translateX(-35vw); }
+  to { transform: translateX(112vw); }
+}
+
+@keyframes bars {
+  from { transform: translateX(-8vw); }
+  to { transform: translateX(8vw); }
+}
+
+@keyframes zoomPunch {
+  0%, 100% { transform: scale(1); filter: saturate(1); }
+  50% { transform: scale(1.08); filter: saturate(1.35) contrast(1.12); }
 }
 
 @keyframes standbySpark {

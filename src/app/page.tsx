@@ -45,16 +45,29 @@ function apiAsset(url: string) {
 }
 
 type ScreenState = {
-  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby";
+  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test";
   color?: string;
   mediaId?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "audio";
   fit?: "contain" | "stretch" | "stage";
   layout?: StageMediaLayout;
-  animation?: "none" | "pulse" | "scan";
+  animation?: AnimationMode;
   message?: string;
   updatedAt?: string;
+  startAt?: number;
+  test?: ScreenTestInfo;
+};
+
+type AnimationMode = "none" | "pulse" | "scan" | "strobe" | "flash" | "glitch" | "wipe" | "bars" | "zoom";
+
+type ScreenTestInfo = {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 type StageMediaLayout = {
@@ -210,7 +223,7 @@ export default function Home() {
       setView("live");
       return;
     }
-    const nextState = { ...state, updatedAt: new Date().toISOString() };
+    const nextState = { ...state, updatedAt: new Date().toISOString(), startAt: Date.now() + (selected.length > 1 ? 320 : 0) };
     const statesByScreen = state.mode === "media" && state.fit === "stage" && state.mediaType !== "audio"
       ? buildStageMediaStates(nextState)
       : null;
@@ -226,6 +239,43 @@ export default function Home() {
       body: JSON.stringify(statesByScreen ? { screenIds: selected, statesByScreen, action } : { screenIds: selected, state: nextState, action }),
     });
     setCommandStatus(`${action} envoye vers ${selected.length} ecran(s).`);
+  }
+
+  async function screenTest() {
+    if (!selected.length) {
+      setCommandStatus("Aucun ecran selectionne.");
+      setView("live");
+      return;
+    }
+    const startAt = Date.now() + (selected.length > 1 ? 320 : 0);
+    const statesByScreen = Object.fromEntries(
+      selectedScreens.map((screen) => [
+        screen.id,
+        {
+          mode: "test" as const,
+          animation: "none" as const,
+          updatedAt: new Date().toISOString(),
+          startAt,
+          test: {
+            id: screen.id,
+            name: screen.name,
+            x: Math.round(screen.x),
+            y: Math.round(screen.y),
+            width: screen.width,
+            height: screen.height,
+          },
+        },
+      ])
+    );
+    setSnapshot((current) => ({
+      ...current,
+      screens: current.screens.map((screen) =>
+        statesByScreen[screen.id] ? { ...screen, state: statesByScreen[screen.id] } : screen
+      ),
+    }));
+    setCommandStatus(`Mire test envoyee vers ${selected.length} ecran(s)...`);
+    await api("/api/v1/command", { method: "POST", body: JSON.stringify({ screenIds: selected, statesByScreen, action: "screen-test" }) });
+    setCommandStatus(`Mire test active sur ${selected.length} ecran(s).`);
   }
 
   function buildStageMediaStates(baseState: ScreenState): Record<string, ScreenState> {
@@ -674,6 +724,17 @@ export default function Home() {
                     <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
                     <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
                   </div>
+                  <div className="deckGrid compactDeck">
+                    {(["pulse", "strobe", "glitch", "wipe", "bars", "zoom"] as AnimationMode[]).map((animation) => (
+                      <button
+                        className="deckKey"
+                        key={`media-${animation}`}
+                        onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit, animation }, `media-${animation}`)}
+                      >
+                        <WandSparkles size={20} /><strong>{animation}</strong><span>Media FX</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="modulePanel effectsModule">
@@ -682,7 +743,13 @@ export default function Home() {
                     <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "none" }, "none")}><Palette size={24} /><strong>Fixe</strong><span>Couleur stable</span></button>
                     <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "pulse" }, "pulse")}><WandSparkles size={24} /><strong>Pulse</strong><span>Respiration</span></button>
                     <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "scan" }, "scan")}><RadioTower size={24} /><strong>Scan</strong><span>Balayage</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "message", message: "TEST SIGNAL" }, "test")}><Clapperboard size={24} /><strong>Mire</strong><span>Test signal</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "strobe" }, "strobe")}><WandSparkles size={24} /><strong>Strobe</strong><span>Flash rythme</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "flash" }, "flash")}><WandSparkles size={24} /><strong>Flash</strong><span>Impact blanc</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "glitch" }, "glitch")}><WandSparkles size={24} /><strong>Glitch</strong><span>Decrochage</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "wipe" }, "wipe")}><WandSparkles size={24} /><strong>Wipe</strong><span>Rideau scene</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "bars" }, "bars")}><WandSparkles size={24} /><strong>Bars</strong><span>Lignes LED</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "color", color, animation: "zoom" }, "zoom")}><WandSparkles size={24} /><strong>Zoom</strong><span>Punch visuel</span></button>
+                    <button className="deckKey" onClick={screenTest}><Clapperboard size={24} /><strong>Screen test</strong><span>ID + position</span></button>
                   </div>
                 </div>
 
