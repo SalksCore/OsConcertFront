@@ -119,7 +119,6 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
 
   return (
     <main className={`viewer ${state.mode} ${state.animation || ""}`} style={{ background: state.mode === "color" ? state.color : undefined }}>
-      {state.mode !== "off" && <div className={`viewerStatus ${connected ? "online" : ""}`}>{connected ? "LIVE" : "SYNC"}</div>}
       {state.mode !== "off" && syncError && <div className="viewerSyncError">{syncError}</div>}
       {state.mode === "color" && <div className="viewerColorLabel">{state.color}</div>}
       {state.mode === "boot" && <BootLoader key={state.updatedAt || state.message || "boot"} message={state.message} />}
