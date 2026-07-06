@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" role="img" aria-label="Logo C Festival">
+  <defs>
+    <linearGradient id="gold" x1="20" y1="20" x2="195" y2="200" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ffd06d"/>
+      <stop offset=".42" stop-color="#ff9f1a"/>
+      <stop offset="1" stop-color="#b75d00"/>
+    </linearGradient>
+    <linearGradient id="dark" x1="40" y1="30" x2="185" y2="195" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1e2026"/>
+      <stop offset="1" stop-color="#090a0d"/>
+    </linearGradient>
+    <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <path d="M110 7 195 56v98l-85 49-85-49V56z" fill="#050609" stroke="url(#gold)" stroke-width="6"/>
+  <path d="M110 23 181 64v82l-71 41-71-41V64z" fill="url(#dark)" stroke="#31343b" stroke-width="4"/>
+  <path d="M110 39 168 72v66l-58 34-58-34V72z" fill="#0c0d11" stroke="url(#gold)" stroke-width="3" opacity=".95"/>
+  <path d="M151 73 116 52 73 77v66l43 25 35-20-15-26-21 12-15-9v-30l15-9 21 12z" fill="url(#gold)" filter="url(#glow)"/>
+  <path d="M145 84 116 67 87 84v52l29 17 24-14-7-12-17 10-16-9V92l16-9 17 10z" fill="#121419" opacity=".92"/>
+</svg>
