@@ -1359,40 +1359,12 @@ code {
 }
 
 .controlPanel.wide {
-  .monitorFrameLabel span,
-  .monitorStreamCard,
-  .monitorStreamCard video,
-  .monitorHero,
-  .monitorHeroActions,
-  .monitorLayout,
-  .monitorPanel,
-  .monitorAside,
-  .monitorScreensPanel,
-  .monitorPanelHead,
-  .monitorPanelHead h3,
-  .monitorPanelHead span,
-  .monitorTileHead,
-  .monitorTileHead strong,
-  .monitorTileHead span {
-    display: none;
-  }
-
-  @media (max-height: 1080px) and (min-width: 1400px) {
-    .monitorFrameLabel {
-      left: 6px;
-      right: 6px;
-      bottom: 6px;
-    }
-
-    .monitorFrameLabel strong {
-      font-size: 11px;
-    }
-  }
-  color: var(--text);
-  font-size: 12px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
+  position: static;
+  width: 100%;
+  max-width: none;
+  display: grid;
+  gap: 13px;
+  padding: 18px;
 }
 
 .screenPickerGrid {
