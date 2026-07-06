@@ -357,7 +357,7 @@ export default function Home() {
                     <div>
                       <p className="eyebrow">{active ? "Actif" : "Concert"}</p>
                       <h3>{concert.name}</h3>
-                      <span>{concertScreens.length} ecran(s) · {concertGroups.length} groupe(s)</span>
+                      <span>{concertScreens.length} ecran(s) - {concertGroups.length} groupe(s)</span>
                     </div>
                     <div className="buttonGrid">
                       <button className={active ? "primary" : ""} onClick={() => activateConcert(concert.id)}>
@@ -593,7 +593,7 @@ function MediaPreview({ media }: { media?: Media }) {
       {media.type === "audio" && <audio src={`${API}${media.url}`} controls />}
       <div>
         <strong>{media.name}</strong>
-        <span>{media.type} · {Math.ceil(media.size / 1024)} Ko</span>
+        <span>{media.type} - {Math.ceil(media.size / 1024)} Ko</span>
       </div>
     </div>
   );
