@@ -180,19 +180,38 @@ export default function Home() {
 
   useEffect(() => {
     if (!logged) return;
-    api("/api/v1/snapshot")
-      .then((data) => {
+    let active = true;
+
+    const loadSnapshot = async () => {
+      try {
+        const data = await api("/api/v1/snapshot");
+        if (!active) return;
         setSnapshot(data);
         setApiError("");
-      })
-      .catch((error) => setApiError(error instanceof Error ? error.message : "API inaccessible"));
+      } catch (error) {
+        if (active) setApiError(error instanceof Error ? error.message : "API inaccessible");
+      }
+    };
+
+    loadSnapshot();
+    // Poll as a reliable fallback so the panel refreshes on its own (online
+    // status, screens, events...) without a manual reload. The real-time SSE
+    // below can be buffered behind an HTTPS->HTTP proxy (e.g. Vercel rewrites)
+    // and never deliver, so we never rely on it alone.
+    const poll = window.setInterval(loadSnapshot, 2000);
+
     const events = new EventSource(`${apiBase()}/api/v1/events`);
     events.addEventListener("snapshot", (event) => {
       setSnapshot(JSON.parse((event as MessageEvent).data));
       setApiError("");
     });
-    events.onerror = () => setApiError(`Flux temps reel indisponible: ${apiBase()}`);
-    return () => events.close();
+    // SSE errors are ignored on purpose: the interval keeps the panel live.
+
+    return () => {
+      active = false;
+      window.clearInterval(poll);
+      events.close();
+    };
   }, [logged]);
 
   const activeConcert = snapshot.concerts.find((concert) => concert.id === snapshot.settings.activeConcertId);
@@ -789,6 +808,27 @@ export default function Home() {
               <div className="groupStrip">
                 {groups.map((group) => <button key={group.id} onClick={() => setSelected(group.screenIds)} style={{ borderColor: group.color }}>{group.name}</button>)}
                 <button onClick={() => setView("live")}><RadioTower size={15} /> Voir les ecrans</button>
+              </div>
+              <div className="screenPicker">
+                <div className="screenPickerHead">
+                  <span>Ecrans</span>
+                  <div>
+                    <button onClick={() => setSelected(screens.map((screen) => screen.id))}><CheckCheck size={13} /> Tous</button>
+                    <button onClick={() => setSelected([])}>Aucun</button>
+                  </div>
+                </div>
+                <div className="screenPickerGrid">
+                  {screens.length === 0 && <span className="muted">Aucun ecran dans ce concert.</span>}
+                  {screens.map((screen) => (
+                    <button
+                      key={screen.id}
+                      className={cx("screenPickerKey", selected.includes(screen.id) && "selected")}
+                      onClick={() => toggleScreen(screen.id)}
+                    >
+                      {screen.name}
+                    </button>
+                  ))}
+                </div>
               </div>
               <div className="console">
                 <div className="modulePanel powerModule">
