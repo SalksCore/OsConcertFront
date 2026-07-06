@@ -34,14 +34,27 @@ import { FormEvent, PointerEvent, useEffect, useRef, useState } from "react";
 const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
 
 type ScreenState = {
-  mode: "off" | "boot" | "color" | "media" | "message" | "stream";
+  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby";
   color?: string;
   mediaId?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "audio";
-  fit?: "contain" | "stretch";
+  fit?: "contain" | "stretch" | "stage";
+  layout?: StageMediaLayout;
   animation?: "none" | "pulse" | "scan";
   message?: string;
+  updatedAt?: string;
+};
+
+type StageMediaLayout = {
+  screenX: number;
+  screenY: number;
+  screenWidth: number;
+  screenHeight: number;
+  stageX: number;
+  stageY: number;
+  stageWidth: number;
+  stageHeight: number;
 };
 
 type Screen = {
@@ -83,13 +96,18 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 async function api(path: string, init?: RequestInit) {
-  const response = await fetch(`${API}${path}`, {
-    ...init,
-    headers:
-      init?.body instanceof FormData
-        ? init.headers
-        : { "Content-Type": "application/json", ...(init?.headers || {}) },
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API}${path}`, {
+      ...init,
+      headers:
+        init?.body instanceof FormData
+          ? init.headers
+          : { "Content-Type": "application/json", ...(init?.headers || {}) },
+    });
+  } catch {
+    throw new Error(`API inaccessible: ${API}`);
+  }
   if (!response.ok) throw new Error(await response.text());
   return response.json();
 }
@@ -107,14 +125,16 @@ export default function Home() {
   const [password, setPassword] = useState("concert");
   const [view, setView] = useState("home");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
+  const [apiError, setApiError] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [color, setColor] = useState("#ff9f1a");
   const [activeMediaId, setActiveMediaId] = useState("");
   const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "audio">("image");
-  const [mediaFit, setMediaFit] = useState<"contain" | "stretch">("contain");
+  const [mediaFit, setMediaFit] = useState<"contain" | "stretch" | "stage">("contain");
   const [messageText, setMessageText] = useState("CONCERT OS");
   const [streamStatus, setStreamStatus] = useState("Pret a capturer une fenetre, un logiciel ou un ecran.");
   const [copiedScreenId, setCopiedScreenId] = useState("");
+  const [commandStatus, setCommandStatus] = useState("");
   const [streaming, setStreaming] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -125,9 +145,18 @@ export default function Home() {
 
   useEffect(() => {
     if (!logged) return;
-    api("/api/v1/snapshot").then(setSnapshot).catch(console.error);
+    api("/api/v1/snapshot")
+      .then((data) => {
+        setSnapshot(data);
+        setApiError("");
+      })
+      .catch((error) => setApiError(error instanceof Error ? error.message : "API inaccessible"));
     const events = new EventSource(`${API}/api/v1/events`);
-    events.addEventListener("snapshot", (event) => setSnapshot(JSON.parse((event as MessageEvent).data)));
+    events.addEventListener("snapshot", (event) => {
+      setSnapshot(JSON.parse((event as MessageEvent).data));
+      setApiError("");
+    });
+    events.onerror = () => setApiError(`Flux temps reel indisponible: ${API}`);
     return () => events.close();
   }, [logged]);
 
@@ -140,10 +169,15 @@ export default function Home() {
 
   async function login(event: FormEvent) {
     event.preventDefault();
-    const result = await api("/api/v1/login", { method: "POST", body: JSON.stringify({ password }) });
-    if (result.ok) {
-      setAuthCookie(true);
-      setLogged(true);
+    try {
+      const result = await api("/api/v1/login", { method: "POST", body: JSON.stringify({ password }) });
+      if (result.ok) {
+        setAuthCookie(true);
+        setLogged(true);
+        setApiError("");
+      }
+    } catch (error) {
+      setApiError(error instanceof Error ? error.message : "Connexion API impossible");
     }
   }
 
@@ -159,8 +193,60 @@ export default function Home() {
   }
 
   async function command(state: ScreenState, action: string = state.mode) {
-    if (!selected.length) return;
-    await api("/api/v1/command", { method: "POST", body: JSON.stringify({ screenIds: selected, state, action }) });
+    if (!selected.length) {
+      setCommandStatus("Aucun ecran selectionne.");
+      setView("live");
+      return;
+    }
+    const nextState = { ...state, updatedAt: new Date().toISOString() };
+    const statesByScreen = state.mode === "media" && state.fit === "stage" && state.mediaType !== "audio"
+      ? buildStageMediaStates(nextState)
+      : null;
+    setSnapshot((current) => ({
+      ...current,
+      screens: current.screens.map((screen) =>
+        selected.includes(screen.id) ? { ...screen, state: statesByScreen?.[screen.id] || nextState } : screen
+      ),
+    }));
+    setCommandStatus(`Envoi ${action} vers ${selected.length} ecran(s)...`);
+    await api("/api/v1/command", {
+      method: "POST",
+      body: JSON.stringify(statesByScreen ? { screenIds: selected, statesByScreen, action } : { screenIds: selected, state: nextState, action }),
+    });
+    setCommandStatus(`${action} envoye vers ${selected.length} ecran(s).`);
+  }
+
+  function buildStageMediaStates(baseState: ScreenState): Record<string, ScreenState> {
+    const selectedLayoutScreens = selectedScreens.length ? selectedScreens : screens.filter((screen) => selected.includes(screen.id));
+    const rects = selectedLayoutScreens.map((screen) => ({
+      id: screen.id,
+      x: screen.x,
+      y: screen.y,
+      width: screen.width * 18,
+      height: screen.height * 18,
+    }));
+    const stageX = Math.min(...rects.map((rect) => rect.x));
+    const stageY = Math.min(...rects.map((rect) => rect.y));
+    const stageWidth = Math.max(...rects.map((rect) => rect.x + rect.width)) - stageX;
+    const stageHeight = Math.max(...rects.map((rect) => rect.y + rect.height)) - stageY;
+    return Object.fromEntries(
+      rects.map((rect) => [
+        rect.id,
+        {
+          ...baseState,
+          layout: {
+            screenX: rect.x,
+            screenY: rect.y,
+            screenWidth: rect.width,
+            screenHeight: rect.height,
+            stageX,
+            stageY,
+            stageWidth,
+            stageHeight,
+          },
+        },
+      ])
+    );
   }
 
   async function createScreen(event: FormEvent<HTMLFormElement>) {
@@ -315,6 +401,7 @@ export default function Home() {
           <h1>Regie ecrans</h1>
           <p className="muted">Controle professionnel des ecrans Minecraft, medias, sons, groupes et flux live.</p>
           <p className="hint">Mot de passe par defaut: <strong>concert</strong></p>
+          {apiError && <p className="apiError">{apiError}</p>}
           <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" />
           <button className="primary"><LogIn size={18} /> Connexion</button>
         </form>
@@ -361,6 +448,7 @@ export default function Home() {
             <span className="badge ok">{screens.filter((screen) => screen.online).length} en ligne</span>
           </div>
         </header>
+        {apiError && <div className="apiBanner">{apiError}</div>}
 
         {view === "home" && (
           <section className="page">
@@ -522,6 +610,7 @@ export default function Home() {
             <aside className="controlPanel wide">
               <h3><Palette size={18} /> Commandes</h3>
               <div className="selectedBox">{selectedScreens.length} ecran(s) selectionne(s)</div>
+              {commandStatus && <div className="commandStatus">{commandStatus}</div>}
               <div className="selectedChips">
                 {selectedScreens.map((screen) => <button key={screen.id} onClick={() => toggleScreen(screen.id)}>{screen.name}</button>)}
                 {!selectedScreens.length && <span>Aucun ecran selectionne. Va dans Selection live ou choisis un groupe.</span>}
@@ -536,7 +625,7 @@ export default function Home() {
                   <div className="deckGrid">
                     <button className="deckKey" onClick={() => command({ mode: "boot" }, "boot")}><Power size={24} /><strong>Boot</strong><span>Demarrage OS</span></button>
                     <button className="deckKey" onClick={() => command({ mode: "boot", message: "Restarting" }, "restart")}><RotateCw size={24} /><strong>Restart</strong><span>Relance ecran</span></button>
-                    <button className="deckKey" onClick={() => command({ mode: "message", message: "STANDBY" }, "standby")}><RadioTower size={24} /><strong>Standby</strong><span>Message attente</span></button>
+                    <button className="deckKey" onClick={() => command({ mode: "standby" }, "standby")}><RadioTower size={24} /><strong>Standby</strong><span>Logo scintillant</span></button>
                     <button className="deckKey danger" onClick={() => command({ mode: "off" }, "off")}><ScreenShareOff size={24} /><strong>Off</strong><span>Noir complet</span></button>
                   </div>
                 </div>
@@ -566,11 +655,12 @@ export default function Home() {
                   <MediaPreview media={activeMedia} />
                   <div className="fitSwitch">
                     <button className={cx(mediaFit === "contain" && "active")} onClick={() => setMediaFit("contain")}>Adapter</button>
-                    <button className={cx(mediaFit === "stretch" && "active")} onClick={() => setMediaFit("stretch")}>Etendre</button>
+                    <button className={cx(mediaFit === "stretch" && "active")} onClick={() => setMediaFit("stretch")}>Etirer ecran</button>
+                    <button className={cx(mediaFit === "stage" && "active")} onClick={() => setMediaFit("stage")}>Etendre plan</button>
                   </div>
                   <div className="buttonGrid">
                     <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
-                    <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "stretch" }, "stretch")}>Plein ecran force</button>
+                    <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
                   </div>
                 </div>
 
@@ -652,13 +742,26 @@ function ScreenCard({
 
 function Stage({ screens, selected, onToggle, editable = false }: { screens: Screen[]; selected: string[]; onToggle: (id: string) => void; editable?: boolean }) {
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+  const [focusedId, setFocusedId] = useState("");
   const dragRef = useRef<{ id: string; dx: number; dy: number; moved: boolean; x: number; y: number } | null>(null);
   const skipClickRef = useRef(false);
+  const focusedScreen = screens.find((screen) => screen.id === focusedId) ?? screens.find((screen) => selected.includes(screen.id));
+  const layoutSignature = screens.map((screen) => `${screen.id}:${screen.x}:${screen.y}:${screen.width}:${screen.height}`).join("|");
 
   useEffect(() => {
     if (dragRef.current) return;
-    setPositions(Object.fromEntries(screens.map((screen) => [screen.id, { x: screen.x, y: screen.y }])));
-  }, [screens]);
+    setPositions((current) => {
+      const next = { ...current };
+      const screenIds = new Set(screens.map((screen) => screen.id));
+      Object.keys(next).forEach((id) => {
+        if (!screenIds.has(id)) delete next[id];
+      });
+      screens.forEach((screen) => {
+        next[screen.id] = { x: screen.x, y: screen.y };
+      });
+      return next;
+    });
+  }, [layoutSignature]);
 
   function move(screen: Screen, event: PointerEvent<HTMLButtonElement>) {
     if (!editable || !dragRef.current || dragRef.current.id !== screen.id) return;
@@ -682,30 +785,54 @@ function Stage({ screens, selected, onToggle, editable = false }: { screens: Scr
   }
 
   return (
-    <div className="stage">
-      {screens.map((screen) => (
-        <button
-          key={screen.id}
-          className={cx("stageScreen", selected.includes(screen.id) && "selected", screen.online && "online")}
-          style={{ left: positions[screen.id]?.x ?? screen.x, top: positions[screen.id]?.y ?? screen.y, width: screen.width * 18, height: screen.height * 18 }}
-          onClick={() => {
-            if (skipClickRef.current) return;
-            onToggle(screen.id);
-          }}
-          onPointerDown={(event) => {
-            if (!editable) return;
-            const rect = event.currentTarget.getBoundingClientRect();
-            dragRef.current = { id: screen.id, dx: event.clientX - rect.left, dy: event.clientY - rect.top, moved: false, x: screen.x, y: screen.y };
-            event.currentTarget.setPointerCapture(event.pointerId);
-          }}
-          onPointerMove={(event) => move(screen, event)}
-          onPointerUp={() => void endDrag(screen)}
-          onPointerCancel={() => void endDrag(screen)}
-        >
-          <strong>{screen.name}</strong>
-          <span>{screen.width}x{screen.height}</span>
-        </button>
-      ))}
+    <div className="stageWrap">
+      <div className="stageInspector">
+        {focusedScreen ? (
+          <>
+            <div>
+              <span>Ecran selectionne</span>
+              <strong>{focusedScreen.name}</strong>
+            </div>
+            <code>{focusedScreen.id}</code>
+            <small>{focusedScreen.width} x {focusedScreen.height} blocs</small>
+            <small>
+              X {Math.round(positions[focusedScreen.id]?.x ?? focusedScreen.x)} / Y {Math.round(positions[focusedScreen.id]?.y ?? focusedScreen.y)}
+            </small>
+            <small>{selected.length} selectionne(s)</small>
+            <b className={focusedScreen.online ? "online" : ""}>{focusedScreen.online ? "online" : "offline"}</b>
+          </>
+        ) : (
+          <span>Clique sur plusieurs ecrans pour les selectionner. Maintiens et glisse pour deplacer un ecran.</span>
+        )}
+      </div>
+      <div className="stage">
+        {screens.map((screen) => (
+          <button
+            key={screen.id}
+            className={cx("stageScreen", selected.includes(screen.id) && "selected", focusedScreen?.id === screen.id && "focused", screen.online && "online")}
+            style={{ left: positions[screen.id]?.x ?? screen.x, top: positions[screen.id]?.y ?? screen.y, width: screen.width * 18, height: screen.height * 18 }}
+            title={`${screen.name} - ${screen.id} - ${screen.width}x${screen.height} blocs`}
+            aria-label={`${screen.name}, ${screen.width} par ${screen.height} blocs`}
+            onClick={() => {
+              if (skipClickRef.current) return;
+              setFocusedId(screen.id);
+              onToggle(screen.id);
+            }}
+            onPointerDown={(event) => {
+              if (!editable) return;
+              const rect = event.currentTarget.getBoundingClientRect();
+              dragRef.current = { id: screen.id, dx: event.clientX - rect.left, dy: event.clientY - rect.top, moved: false, x: screen.x, y: screen.y };
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerMove={(event) => move(screen, event)}
+            onPointerUp={() => void endDrag(screen)}
+            onPointerCancel={() => void endDrag(screen)}
+          >
+            <strong>{screen.name}</strong>
+            <span>{screen.width}x{screen.height}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
