@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { use, useEffect, useState, type CSSProperties } from "react";
+import { use, useCallback, useEffect, useState, type CSSProperties } from "react";
 
 const CONFIGURED_API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
 
@@ -93,7 +93,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
   const [connected, setConnected] = useState(false);
   const [syncError, setSyncError] = useState("");
 
-  function applyState(nextState: ScreenState) {
+  const applyState = useCallback((nextState: ScreenState) => {
     // startAt is an absolute server timestamp used to sync several screens.
     // We only honor it when it lands in a short, plausible window: this keeps
     // the intended multi-screen sync (a few hundred ms) while preventing a
@@ -106,9 +106,9 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       return;
     }
     window.setTimeout(() => setState(nextState), delay);
-  }
+  }, []);
 
-  async function refreshState() {
+  const refreshState = useCallback(async () => {
     try {
       const response = await fetch(`${apiBase()}/api/v1/screens/${id}/state`, { cache: "no-store" });
       if (response.ok) {
@@ -133,11 +133,15 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
     }
     applyState(screen.state);
     setSyncError("");
-  }
+  }, [applyState, id]);
 
   useEffect(() => {
-    refreshState().catch(() => {});
-    const poll = window.setInterval(() => refreshState().catch(() => {}), 1000);
+    void (async () => {
+      await refreshState();
+    })();
+    const poll = window.setInterval(() => {
+      refreshState().catch(() => {});
+    }, 1000);
     const events = new EventSource(`${apiBase()}/api/v1/screens/${id}/events`);
     events.onopen = () => setConnected(true);
     events.onerror = () => setConnected(false);
@@ -150,7 +154,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       window.clearInterval(poll);
       events.close();
     };
-  }, [id]);
+  }, [applyState, id, refreshState]);
 
   // Frames only arrive over SSE ("stream-frame"). Behind an HTTPS->HTTP proxy
   // (e.g. Vercel rewrites) that stream can be buffered and never reaches us,
@@ -179,6 +183,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
 
   return (
     <main className={`viewer ${state.mode} ${state.animation || ""}`} style={{ background: state.mode === "color" ? state.color : undefined }}>
+      <div className={`viewerStatus ${connected ? "online" : ""}`}>{connected ? "online" : "offline"}</div>
       {state.mode !== "off" && syncError && <div className="viewerSyncError">{syncError}</div>}
       {state.mode === "color" && <div className="viewerColorLabel">{state.color}</div>}
       {state.mode === "boot" && <BootLoader key={state.updatedAt || state.message || "boot"} message={state.message} />}

@@ -21,6 +21,7 @@ import {
   RadioTower,
   RotateCw,
   Save,
+  ScanEye,
   ScreenShare,
   ScreenShareOff,
   Settings,
@@ -154,7 +155,7 @@ function hasAuthCookie() {
 }
 
 export default function Home() {
-  const [logged, setLogged] = useState(false);
+  const [logged, setLogged] = useState(() => hasAuthCookie());
   const [password, setPassword] = useState("concert");
   const [view, setView] = useState("home");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
@@ -173,10 +174,6 @@ export default function Home() {
   const [streaming, setStreaming] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    if (hasAuthCookie()) setLogged(true);
-  }, []);
 
   useEffect(() => {
     if (!logged) return;
@@ -590,6 +587,7 @@ export default function Home() {
           ["media", ImageIcon, "Medias"],
           ["live", RadioTower, "Selection live"],
           ["regie", Palette, "Commandes"],
+          ["monitor", ScanEye, "Monitoring"],
           ["settings", Settings, "Parametres"],
         ].map(([id, Icon, label]) => (
           <button key={String(id)} className={cx("nav", view === id && "active")} onClick={() => setView(String(id))}>
@@ -685,7 +683,7 @@ export default function Home() {
                 <label className="fieldLabel">Hauteur en blocs<input name="height" type="number" min="1" defaultValue="5" /></label>
                 <button className="primary"><Plus size={16} /> Ajouter</button>
               </form>
-              <p className="hint">L'identifiant technique est genere automatiquement par le site. Largeur = nombre de blocs horizontal, hauteur = nombre de blocs vertical.</p>
+              <p className="hint">L&apos;identifiant technique est genere automatiquement par le site. Largeur = nombre de blocs horizontal, hauteur = nombre de blocs vertical.</p>
             </Panel>
             <div className="cards">
               {screens.map((screen) => (
@@ -921,6 +919,77 @@ export default function Home() {
             <Panel title="Mot de passe unique" icon={<KeyRound size={18} />}>
               <PasswordForm />
             </Panel>
+          </section>
+        )}
+
+        {view === "monitor" && (
+          <section className="page monitorPage">
+            <div className="monitorHero panel">
+              <div>
+                <p className="eyebrow">Monitoring temps reel</p>
+                <h3>Retour ecrans et flux live</h3>
+                <p className="muted">Vue compacte pour surveiller tous les ecrans en meme temps sans quitter la regie.</p>
+              </div>
+              <div className="monitorHeroActions">
+                <button className="primary" onClick={() => setView("regie")}><Palette size={16} /> Retour regie</button>
+                <button onClick={() => setView("live")}><RadioTower size={16} /> Selection live</button>
+              </div>
+            </div>
+
+            <div className="monitorLayout">
+              <section className="panel monitorPanel monitorScreensPanel">
+                <div className="monitorPanelHead">
+                  <h3><MonitorUp size={18} /> Mosaque des ecrans</h3>
+                  <span>{screens.length} ecran(s)</span>
+                </div>
+                <div className="monitorGrid">
+                  {screens.length === 0 && <div className="monitorEmpty">Aucun ecran dans ce concert.</div>}
+                  {screens.map((screen) => (
+                    <article className="monitorTile" key={screen.id}>
+                      <div className="monitorTileHead">
+                        <div>
+                          <strong>{screen.name}</strong>
+                          <span>{screen.width} x {screen.height} blocs</span>
+                        </div>
+                        <b className={screen.online ? "online" : ""}>{screen.online ? "online" : "offline"}</b>
+                      </div>
+                      <div className="monitorFrame">
+                        <iframe
+                          src={`/screen/${screen.id}`}
+                          title={screen.name}
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
+              <aside className="monitorAside">
+                <Panel title="Retours camera" icon={<ScreenShare size={18} />}>
+                  <div className="monitorStreamCard">
+                    <p className="muted">Le retour de capture actif est visible ici pour controler le flux avant diffusion.</p>
+                    {streaming ? (
+                      <video ref={videoRef} muted autoPlay playsInline />
+                    ) : (
+                      <div className="monitorStreamEmpty">Aucun stream actif pour le moment.</div>
+                    )}
+                  </div>
+                </Panel>
+
+                <Panel title="Dernieres actions" icon={<Activity size={18} />}>
+                  <div className="monitorEvents">
+                    {snapshot.events.slice(0, 10).map((event) => (
+                      <div className="item" key={event.id}>
+                        <strong>{event.type}</strong>
+                        <span>{new Date(event.createdAt).toLocaleTimeString("fr-FR")}</span>
+                      </div>
+                    ))}
+                  </div>
+                </Panel>
+              </aside>
+            </div>
           </section>
         )}
       </main>
