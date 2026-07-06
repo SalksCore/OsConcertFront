@@ -958,13 +958,13 @@ export default function Home() {
                       </div>
 
                       <div className="commandPreviewColumn">
-                        <Panel title="Previsualisation" icon={<Play size={18} />}>
-                          <MediaPreview media={activeMedia} />
-                        </Panel>
                         <div className="buttonGrid commandActionGrid">
                           <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
                           <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
                         </div>
+                        <Panel title="Previsualisation" icon={<Play size={18} />}>
+                          <MediaPreview media={activeMedia} />
+                        </Panel>
                       </div>
                     </div>
                   </div>
