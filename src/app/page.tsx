@@ -31,7 +31,18 @@ import {
 import Image from "next/image";
 import { FormEvent, PointerEvent, useEffect, useRef, useState } from "react";
 
-const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
+const CONFIGURED_API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
+
+function apiBase() {
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && CONFIGURED_API.startsWith("http://")) {
+    return "/api-proxy";
+  }
+  return CONFIGURED_API;
+}
+
+function apiAsset(url: string) {
+  return `${apiBase()}${url}`;
+}
 
 type ScreenState = {
   mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby";
@@ -96,9 +107,10 @@ function cx(...classes: Array<string | false | null | undefined>) {
 }
 
 async function api(path: string, init?: RequestInit) {
+  const base = apiBase();
   let response: Response;
   try {
-    response = await fetch(`${API}${path}`, {
+    response = await fetch(`${base}${path}`, {
       ...init,
       headers:
         init?.body instanceof FormData
@@ -106,7 +118,7 @@ async function api(path: string, init?: RequestInit) {
           : { "Content-Type": "application/json", ...(init?.headers || {}) },
     });
   } catch {
-    throw new Error(`API inaccessible: ${API}`);
+    throw new Error(`API inaccessible: ${base}`);
   }
   if (!response.ok) throw new Error(await response.text());
   return response.json();
@@ -151,12 +163,12 @@ export default function Home() {
         setApiError("");
       })
       .catch((error) => setApiError(error instanceof Error ? error.message : "API inaccessible"));
-    const events = new EventSource(`${API}/api/v1/events`);
+    const events = new EventSource(`${apiBase()}/api/v1/events`);
     events.addEventListener("snapshot", (event) => {
       setSnapshot(JSON.parse((event as MessageEvent).data));
       setApiError("");
     });
-    events.onerror = () => setApiError(`Flux temps reel indisponible: ${API}`);
+    events.onerror = () => setApiError(`Flux temps reel indisponible: ${apiBase()}`);
     return () => events.close();
   }, [logged]);
 
@@ -659,8 +671,8 @@ export default function Home() {
                     <button className={cx(mediaFit === "stage" && "active")} onClick={() => setMediaFit("stage")}>Etendre plan</button>
                   </div>
                   <div className="buttonGrid">
-                    <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
-                    <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: `${API}${activeMedia.url}`, mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
+                    <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
+                    <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
                   </div>
                 </div>
 
@@ -888,8 +900,8 @@ function MediaGrid({
     <div className={cx("mediaGrid", compact && "compact", deck && "deckMediaGrid")}>
       {media.map((item) => (
         <button key={item.id} className={cx("mediaCard", deck && "deckMediaKey", activeId === item.id && "selected")} onClick={() => onPick(item.id)}>
-          {item.type === "image" && <img src={`${API}${item.url}`} alt="" />}
-          {item.type === "video" && <video src={`${API}${item.url}`} muted />}
+          {item.type === "image" && <img src={apiAsset(item.url)} alt="" />}
+          {item.type === "video" && <video src={apiAsset(item.url)} muted />}
           {item.type === "audio" && <div className="audioTile">AUDIO</div>}
           <strong>{item.name}</strong>
           <span>{item.type}</span>
@@ -906,9 +918,9 @@ function MediaPreview({ media }: { media?: Media }) {
 
   return (
     <div className="mediaPreview">
-      {media.type === "image" && <img src={`${API}${media.url}`} alt="" />}
-      {media.type === "video" && <video src={`${API}${media.url}`} controls />}
-      {media.type === "audio" && <audio src={`${API}${media.url}`} controls />}
+      {media.type === "image" && <img src={apiAsset(media.url)} alt="" />}
+      {media.type === "video" && <video src={apiAsset(media.url)} controls />}
+      {media.type === "audio" && <audio src={apiAsset(media.url)} controls />}
       <div>
         <strong>{media.name}</strong>
         <span>{media.type} - {Math.ceil(media.size / 1024)} Ko</span>

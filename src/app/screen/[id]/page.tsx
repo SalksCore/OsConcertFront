@@ -3,7 +3,14 @@
 import Image from "next/image";
 import { use, useEffect, useState, type CSSProperties } from "react";
 
-const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
+const CONFIGURED_API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
+
+function apiBase() {
+  if (typeof window !== "undefined" && window.location.protocol === "https:" && CONFIGURED_API.startsWith("http://")) {
+    return "/api-proxy";
+  }
+  return CONFIGURED_API;
+}
 
 type ScreenState = {
   mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby";
@@ -75,7 +82,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
 
   async function refreshState() {
     try {
-      const response = await fetch(`${API}/api/v1/screens/${id}/state`, { cache: "no-store" });
+      const response = await fetch(`${apiBase()}/api/v1/screens/${id}/state`, { cache: "no-store" });
       if (response.ok) {
         setState(await response.json());
         setSyncError("");
@@ -85,7 +92,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       // Fallback below.
     }
 
-    const snapshotResponse = await fetch(`${API}/api/v1/snapshot`, { cache: "no-store" });
+    const snapshotResponse = await fetch(`${apiBase()}/api/v1/snapshot`, { cache: "no-store" });
     if (!snapshotResponse.ok) {
       setSyncError(`API ${snapshotResponse.status}`);
       return;
@@ -103,7 +110,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
   useEffect(() => {
     refreshState().catch(() => {});
     const poll = window.setInterval(() => refreshState().catch(() => {}), 1000);
-    const events = new EventSource(`${API}/api/v1/screens/${id}/events`);
+    const events = new EventSource(`${apiBase()}/api/v1/screens/${id}/events`);
     events.onopen = () => setConnected(true);
     events.onerror = () => setConnected(false);
     events.addEventListener("state", (event) => {
