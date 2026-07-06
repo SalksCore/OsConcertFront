@@ -1891,13 +1891,23 @@ code {
 }
 
 .viewerTransition.up::before,
+.viewerTransition.lift::before {
+  background: linear-gradient(180deg, transparent, rgba(244, 178, 59, .46), rgba(255, 255, 255, .16));
+  animation: riseReveal .72s ease both;
+}
+
+.viewerTransition.down::before,
+.viewerTransition.drop::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .18), rgba(244, 178, 59, .28), transparent);
+  animation: fallReveal .72s ease both;
+}
+
 .viewerTransition.scan::before,
 .viewerTransition.scanline::before {
   background: linear-gradient(180deg, transparent, rgba(244, 178, 59, .5), transparent);
   animation: scanRise .72s ease both;
 }
 
-.viewerTransition.down::before,
 .viewerTransition.shake::before {
   background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .35), transparent);
   animation: scanFall .72s ease both;
@@ -1983,6 +1993,76 @@ code {
   height: var(--stage-media-height);
   max-width: none;
   object-fit: fill;
+}
+
+.viewer img.rise,
+.viewer video.rise,
+.viewer img.lift,
+.viewer video.lift,
+.viewer img.up,
+.viewer video.up {
+  animation: riseContent .72s ease both;
+}
+
+.viewer img.fall,
+.viewer video.fall,
+.viewer img.drop,
+.viewer video.drop,
+.viewer img.down,
+.viewer video.down {
+  animation: fallContent .72s ease both;
+}
+
+.viewer img.left,
+.viewer video.left,
+.viewer img.drift,
+.viewer video.drift {
+  animation: leftContent .72s ease both;
+}
+
+.viewer img.right,
+.viewer video.right,
+.viewer img.orbit,
+.viewer video.orbit {
+  animation: rightContent .72s ease both;
+}
+
+.viewer img.wave,
+.viewer video.wave {
+  animation: waveContent .82s ease both;
+}
+
+.viewer img.stair,
+.viewer video.stair,
+.viewer img.iris,
+.viewer video.iris {
+  animation: stairContent .72s ease both;
+}
+
+.viewer img.tilt,
+.viewer video.tilt,
+.viewer img.glow,
+.viewer video.glow {
+  animation: tiltContent .72s ease both;
+}
+
+.viewer img.pixel,
+.viewer video.pixel,
+.viewer img.matrix,
+.viewer video.matrix {
+  animation: pixelContent .72s steps(8, end) both;
+}
+
+.viewer img.shake,
+.viewer video.shake {
+  animation: shakeContent .66s ease both;
+}
+
+.viewer img.scanline,
+.viewer video.scanline,
+.viewer img.scan,
+.viewer video.scan {
+  animation: scanContent .72s ease both;
 }
 
 .viewerStageMedia.rise img,

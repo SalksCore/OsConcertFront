@@ -265,9 +265,10 @@ function ScreenTest({ test }: { test?: ScreenTestInfo }) {
 function StageMedia({ state, kind }: { state: ScreenState; kind: "image" | "video" }) {
   if (state.fit !== "stage" || !state.layout) {
     const className = state.fit === "stretch" ? "stretch" : "";
+    const animatedClassName = [className, state.animation || "none"].filter(Boolean).join(" ");
     return kind === "image"
-      ? <img className={className} src={state.mediaUrl} alt="" />
-      : <video className={className} src={state.mediaUrl} autoPlay loop muted playsInline />;
+      ? <img className={animatedClassName} src={state.mediaUrl} alt="" />
+      : <video className={animatedClassName} src={state.mediaUrl} autoPlay loop muted playsInline />;
   }
 
   const layout = state.layout;
