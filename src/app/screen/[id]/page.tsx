@@ -15,6 +15,7 @@ function apiBase() {
 type ScreenState = {
   mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test";
   color?: string;
+  mediaId?: string;
   mediaUrl?: string;
   mediaType?: "image" | "video" | "audio";
   fit?: "contain" | "stretch" | "stage";
@@ -26,7 +27,36 @@ type ScreenState = {
   test?: ScreenTestInfo;
 };
 
-type AnimationMode = "none" | "pulse" | "scan" | "strobe" | "flash" | "glitch" | "wipe" | "bars" | "zoom";
+type AnimationMode =
+  | "none"
+  | "pulse"
+  | "scan"
+  | "strobe"
+  | "flash"
+  | "glitch"
+  | "wipe"
+  | "bars"
+  | "zoom"
+  | "rise"
+  | "fall"
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "glow"
+  | "grid"
+  | "pixel"
+  | "wave"
+  | "drift"
+  | "shake"
+  | "stair"
+  | "tilt"
+  | "orbit"
+  | "iris"
+  | "matrix"
+  | "scanline"
+  | "lift"
+  | "drop";
 
 type ScreenTestInfo = {
   id: string;
@@ -92,6 +122,7 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
   const [frame, setFrame] = useState("");
   const [connected, setConnected] = useState(false);
   const [syncError, setSyncError] = useState("");
+  const [transitioning, setTransitioning] = useState(false);
 
   const applyState = useCallback((nextState: ScreenState) => {
     // startAt is an absolute server timestamp used to sync several screens.
@@ -134,6 +165,16 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
     applyState(screen.state);
     setSyncError("");
   }, [applyState, id]);
+
+  const contentKey = state.mode === "stream"
+    ? `stream:${state.updatedAt || ""}`
+    : `${state.mode}:${state.updatedAt || state.mediaUrl || state.mediaId || state.message || state.color || ""}`;
+
+  useEffect(() => {
+    setTransitioning(true);
+    const timer = window.setTimeout(() => setTransitioning(false), 720);
+    return () => window.clearTimeout(timer);
+  }, [contentKey]);
 
   useEffect(() => {
     void (async () => {
@@ -185,13 +226,14 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
     <main className={`viewer ${state.mode} ${state.animation || ""}`} style={{ background: state.mode === "color" ? state.color : undefined }}>
       <div className={`viewerStatus ${connected ? "online" : ""}`}>{connected ? "online" : "offline"}</div>
       {state.mode !== "off" && syncError && <div className="viewerSyncError">{syncError}</div>}
+      <div className={`viewerTransition ${transitioning ? "active" : ""} ${state.animation || "none"}`} />
       {state.mode === "color" && <div className="viewerColorLabel">{state.color}</div>}
       {state.mode === "boot" && <BootLoader key={state.updatedAt || state.message || "boot"} message={state.message} />}
       {state.mode === "standby" && <StandbyLogo />}
       {state.mode === "message" && <div className="viewerMessage">{state.message}</div>}
       {state.mode === "test" && <ScreenTest test={state.test} />}
-      {state.mode === "media" && state.mediaType === "image" && <StageMedia state={state} kind="image" />}
-      {state.mode === "media" && state.mediaType === "video" && <StageMedia state={state} kind="video" />}
+      {state.mode === "media" && state.mediaType === "image" && <StageMedia key={contentKey} state={state} kind="image" />}
+      {state.mode === "media" && state.mediaType === "video" && <StageMedia key={contentKey} state={state} kind="video" />}
       {state.mode === "media" && state.mediaType === "audio" && <audio src={state.mediaUrl} autoPlay controls />}
       {state.mode === "stream" && frame && <img src={frame} alt="" />}
       {state.mode === "stream" && !frame && <div className="viewerMessage">WAITING STREAM</div>}
@@ -237,7 +279,7 @@ function StageMedia({ state, kind }: { state: ScreenState; kind: "image" | "vide
   } as CSSProperties;
 
   return (
-    <div className="viewerStageMedia" style={stageStyle}>
+    <div className={`viewerStageMedia ${state.animation || "none"}`} style={stageStyle}>
       {kind === "image"
         ? <img src={state.mediaUrl} alt="" />
         : <video src={state.mediaUrl} autoPlay loop muted playsInline />}

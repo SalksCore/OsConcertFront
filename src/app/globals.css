@@ -1214,6 +1214,31 @@ code {
   background: #000;
 }
 
+.monitorDock {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 7;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .42);
+  backdrop-filter: blur(8px);
+}
+
+.monitorDockButton {
+  width: 34px;
+  height: 34px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 8px;
+  color: #fff;
+  background: rgba(255, 255, 255, .04);
+}
+
 .monitorBoard {
   width: 100vw;
   height: 100vh;
@@ -1567,6 +1592,115 @@ code {
   color: var(--text);
 }
 
+.viewerTransition {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 14;
+  transition: opacity .08s linear;
+}
+
+.viewerTransition.active {
+  opacity: 1;
+}
+
+.viewerTransition::before,
+.viewerTransition::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.viewerTransition.rise::before,
+.viewerTransition.lift::before {
+  background: linear-gradient(180deg, transparent 0%, rgba(244, 178, 59, .22) 45%, rgba(255, 255, 255, .34) 100%);
+  animation: riseReveal .72s ease both;
+}
+
+.viewerTransition.fall::before,
+.viewerTransition.drop::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, .34) 0%, rgba(244, 178, 59, .22) 55%, transparent 100%);
+  animation: fallReveal .72s ease both;
+}
+
+.viewerTransition.left::before,
+.viewerTransition.drift::before {
+  background: linear-gradient(90deg, rgba(244, 178, 59, .18), rgba(255, 255, 255, .34), transparent);
+  animation: slideLeftReveal .72s ease both;
+}
+
+.viewerTransition.right::before,
+.viewerTransition.orbit::before {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .34), rgba(244, 178, 59, .18));
+  animation: slideRightReveal .72s ease both;
+}
+
+.viewerTransition.up::before,
+.viewerTransition.scan::before,
+.viewerTransition.scanline::before {
+  background: linear-gradient(180deg, transparent, rgba(244, 178, 59, .5), transparent);
+  animation: scanRise .72s ease both;
+}
+
+.viewerTransition.down::before,
+.viewerTransition.shake::before {
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .35), transparent);
+  animation: scanFall .72s ease both;
+}
+
+.viewerTransition.glow::before,
+.viewerTransition.pulse::before {
+  background: radial-gradient(circle, rgba(255, 255, 255, .42), rgba(244, 178, 59, .22) 40%, transparent 72%);
+  animation: glowReveal .72s ease both;
+}
+
+.viewerTransition.grid::before {
+  background:
+    linear-gradient(rgba(255, 255, 255, .08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .08) 1px, transparent 1px);
+  background-size: 22px 22px;
+  animation: gridReveal .72s ease both;
+}
+
+.viewerTransition.pixel::before,
+.viewerTransition.matrix::before {
+  background:
+    radial-gradient(circle, rgba(244, 178, 59, .45) 0 1px, transparent 2px) 0 0 / 12px 12px,
+    linear-gradient(180deg, rgba(255, 255, 255, .08), transparent);
+  animation: pixelReveal .72s steps(8, end) both;
+}
+
+.viewerTransition.wave::before {
+  background: linear-gradient(90deg, transparent 0 15%, rgba(244, 178, 59, .32) 45%, rgba(255, 255, 255, .35) 50%, rgba(244, 178, 59, .32) 55%, transparent 85%);
+  animation: waveReveal .72s ease both;
+}
+
+.viewerTransition.stair::before,
+.viewerTransition.iris::before {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, .3), rgba(244, 178, 59, .22) 30%, transparent 60%);
+  animation: stairReveal .72s ease both;
+}
+
+.viewerTransition.tilt::before,
+.viewerTransition.zoom::before {
+  background: radial-gradient(circle at center, rgba(255, 255, 255, .36), rgba(244, 178, 59, .2) 40%, transparent 68%);
+  animation: tiltReveal .72s ease both;
+}
+
+.viewerTransition.wipe::before,
+.viewerTransition.bars::before {
+  background: linear-gradient(90deg, transparent, rgba(244, 178, 59, .7), #fff, rgba(244, 178, 59, .7), transparent);
+  animation: wipeReveal .72s ease both;
+}
+
+.viewerTransition::after {
+  background: linear-gradient(180deg, transparent 0 46%, rgba(255, 255, 255, .24) 46% 48%, transparent 48% 100%);
+  mix-blend-mode: screen;
+  opacity: .55;
+  animation: lineLoad .72s ease both;
+}
+
 .viewer img,
 .viewer video {
   width: 100%;
@@ -1595,6 +1729,76 @@ code {
   height: var(--stage-media-height);
   max-width: none;
   object-fit: fill;
+}
+
+.viewerStageMedia.rise img,
+.viewerStageMedia.rise video,
+.viewerStageMedia.lift img,
+.viewerStageMedia.lift video,
+.viewerStageMedia.up img,
+.viewerStageMedia.up video {
+  animation: riseContent .72s ease both;
+}
+
+.viewerStageMedia.fall img,
+.viewerStageMedia.fall video,
+.viewerStageMedia.drop img,
+.viewerStageMedia.drop video,
+.viewerStageMedia.down img,
+.viewerStageMedia.down video {
+  animation: fallContent .72s ease both;
+}
+
+.viewerStageMedia.left img,
+.viewerStageMedia.left video,
+.viewerStageMedia.drift img,
+.viewerStageMedia.drift video {
+  animation: leftContent .72s ease both;
+}
+
+.viewerStageMedia.right img,
+.viewerStageMedia.right video,
+.viewerStageMedia.orbit img,
+.viewerStageMedia.orbit video {
+  animation: rightContent .72s ease both;
+}
+
+.viewerStageMedia.wave img,
+.viewerStageMedia.wave video {
+  animation: waveContent .82s ease both;
+}
+
+.viewerStageMedia.stair img,
+.viewerStageMedia.stair video,
+.viewerStageMedia.iris img,
+.viewerStageMedia.iris video {
+  animation: stairContent .72s ease both;
+}
+
+.viewerStageMedia.tilt img,
+.viewerStageMedia.tilt video,
+.viewerStageMedia.glow img,
+.viewerStageMedia.glow video {
+  animation: tiltContent .72s ease both;
+}
+
+.viewerStageMedia.pixel img,
+.viewerStageMedia.pixel video,
+.viewerStageMedia.matrix img,
+.viewerStageMedia.matrix video {
+  animation: pixelContent .72s steps(8, end) both;
+}
+
+.viewerStageMedia.shake img,
+.viewerStageMedia.shake video {
+  animation: shakeContent .66s ease both;
+}
+
+.viewerStageMedia.scanline img,
+.viewerStageMedia.scanline video,
+.viewerStageMedia.scan img,
+.viewerStageMedia.scan video {
+  animation: scanContent .72s ease both;
 }
 
 .viewerMessage {
@@ -2039,6 +2243,31 @@ code {
   0%, 100% { transform: scale(1); filter: saturate(1); }
   50% { transform: scale(1.08); filter: saturate(1.35) contrast(1.12); }
 }
+
+@keyframes riseReveal { from { transform: translateY(35vh); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fallReveal { from { transform: translateY(-35vh); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes slideLeftReveal { from { transform: translateX(40vw); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes slideRightReveal { from { transform: translateX(-40vw); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes scanRise { from { transform: translateY(38vh); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes scanFall { from { transform: translateY(-38vh); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes glowReveal { from { transform: scale(.62); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes gridReveal { from { transform: scale(.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes pixelReveal { from { opacity: 0; filter: saturate(1.5) contrast(1.2); } to { opacity: 1; filter: saturate(1) contrast(1); } }
+@keyframes waveReveal { from { transform: translateX(-34vw); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes stairReveal { from { clip-path: inset(100% 0 0 0); opacity: 0; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes tiltReveal { from { transform: perspective(900px) rotateX(22deg) scale(.88); opacity: 0; } to { transform: perspective(900px) rotateX(0) scale(1); opacity: 1; } }
+@keyframes wipeReveal { from { transform: translateX(-55vw); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes lineLoad { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+@keyframes riseContent { from { transform: translateY(18%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fallContent { from { transform: translateY(-18%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes leftContent { from { transform: translateX(18%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes rightContent { from { transform: translateX(-18%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+@keyframes waveContent { 0% { transform: scale(.96) translateX(-1.5%); opacity: 0; } 100% { transform: scale(1) translateX(0); opacity: 1; } }
+@keyframes stairContent { from { clip-path: inset(100% 0 0 0); opacity: 0; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+@keyframes tiltContent { from { transform: perspective(900px) rotateY(14deg) scale(.92); opacity: 0; } to { transform: perspective(900px) rotateY(0) scale(1); opacity: 1; } }
+@keyframes pixelContent { from { filter: blur(8px) saturate(1.6); opacity: 0; } to { filter: blur(0) saturate(1); opacity: 1; } }
+@keyframes shakeContent { 0% { transform: translate(0, 0); opacity: 0; } 25% { transform: translate(-1.5%, .8%); } 50% { transform: translate(1.2%, -0.6%); opacity: 1; } 75% { transform: translate(-.6%, .4%); } 100% { transform: translate(0, 0); } }
+@keyframes scanContent { from { clip-path: inset(100% 0 0 0); opacity: 0; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
 
 @keyframes standbySpark {
   0%, 100% {

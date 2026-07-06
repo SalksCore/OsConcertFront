@@ -60,7 +60,36 @@ type ScreenState = {
   test?: ScreenTestInfo;
 };
 
-type AnimationMode = "none" | "pulse" | "scan" | "strobe" | "flash" | "glitch" | "wipe" | "bars" | "zoom";
+type AnimationMode =
+  | "none"
+  | "pulse"
+  | "scan"
+  | "strobe"
+  | "flash"
+  | "glitch"
+  | "wipe"
+  | "bars"
+  | "zoom"
+  | "rise"
+  | "fall"
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "glow"
+  | "grid"
+  | "pixel"
+  | "wave"
+  | "drift"
+  | "shake"
+  | "stair"
+  | "tilt"
+  | "orbit"
+  | "iris"
+  | "matrix"
+  | "scanline"
+  | "lift"
+  | "drop";
 
 type ScreenTestInfo = {
   id: string;
@@ -912,6 +941,17 @@ export default function Home() {
                     <button className={cx("deckKey", animationIsActive("bars") && "activeDeck")} onClick={() => toggleAnimation("bars")}><WandSparkles size={24} /><strong>Bars</strong><span>Toggle effet</span></button>
                     <button className={cx("deckKey", animationIsActive("zoom") && "activeDeck")} onClick={() => toggleAnimation("zoom")}><WandSparkles size={24} /><strong>Zoom</strong><span>Toggle effet</span></button>
                   </div>
+                  <div className="deckGrid compactDeck advancedDeck">
+                    {(["rise", "fall", "left", "right", "up", "down", "glow", "grid", "pixel", "wave", "drift", "shake", "stair", "tilt", "orbit", "iris", "matrix", "scanline", "lift", "drop"] as AnimationMode[]).map((animation) => (
+                      <button
+                        className={cx("deckKey", animationIsActive(animation) && "activeDeck")}
+                        key={`fx-${animation}`}
+                        onClick={() => toggleAnimation(animation)}
+                      >
+                        <WandSparkles size={20} /><strong>{animation}</strong><span>FX</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="modulePanel streamModule">
@@ -938,6 +978,10 @@ export default function Home() {
 
         {view === "monitor" && (
           <section className="monitorOnly">
+            <div className="monitorDock">
+              <button className="monitorDockButton" onClick={() => setView("regie")} aria-label="Retour regie"><Palette size={16} /></button>
+              <button className="monitorDockButton" onClick={() => setView("live")} aria-label="Selection live"><RadioTower size={16} /></button>
+            </div>
             <div
               className="monitorBoard"
               style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(screens.length, 1), 2)}, minmax(0, 1fr))` }}
