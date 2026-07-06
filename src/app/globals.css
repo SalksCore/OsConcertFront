@@ -1054,6 +1054,288 @@ code {
 
 .commandPage {
   max-width: none;
+  height: calc(100vh - 116px);
+  overflow: hidden;
+}
+
+.commandShell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.commandHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.commandTitleBlock h2 {
+  margin: 6px 0 8px;
+  font-size: 28px;
+}
+
+.commandHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.commandHeaderActions button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  background: #11110f;
+  font-weight: 850;
+}
+
+.commandWorkspace {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, .98fr) minmax(0, 1.32fr);
+  gap: 12px;
+}
+
+.commandSidebar,
+.commandMediaPane {
+  min-height: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.commandSidebar {
+  align-content: start;
+}
+
+.commandBlock {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: linear-gradient(180deg, #131311, #0d0d0c);
+}
+
+.commandBlockHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.commandBlockHead span {
+  color: var(--gold);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.commandBlockActions {
+  display: flex;
+  gap: 6px;
+}
+
+.commandBlockActions button,
+.commandMediaActions button {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--text);
+  background: #11110f;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.commandBlock .selectedChips {
+  max-height: 66px;
+  overflow: hidden;
+}
+
+.compactGroupStrip {
+  margin-bottom: 0;
+}
+
+.compactPicker .screenPickerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
+  max-height: none;
+  overflow: visible;
+}
+
+.compactPicker .screenPickerHead {
+  justify-content: flex-start;
+}
+
+.commandDeckGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compactDeckGrid {
+  gap: 8px;
+}
+
+.commandDeckGrid .deckKey {
+  min-height: 76px;
+  padding: 10px 8px;
+  border-radius: 9px;
+  gap: 5px;
+}
+
+.commandDeckGrid .deckKey strong {
+  font-size: 13px;
+}
+
+.commandDeckGrid .deckKey span {
+  display: none;
+}
+
+.commandFxGrid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.commandFxGrid .deckKey {
+  min-height: 60px;
+  padding: 8px 6px;
+  gap: 4px;
+}
+
+.commandFxGrid .deckKey strong {
+  font-size: 11px;
+  text-transform: capitalize;
+}
+
+.commandColorConsole {
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.commandColorConsole .primary {
+  grid-column: 1 / -1;
+}
+
+.commandPresetGrid {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+}
+
+.compactMessageConsole {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.compactStreamStatus {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
+.commandStreamPreview {
+  width: 100%;
+  min-height: 112px;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #000;
+}
+
+.commandMediaShell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.commandMediaHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.commandMediaHead h3 {
+  margin: 6px 0 0;
+  font-size: 22px;
+}
+
+.commandMediaActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.commandMediaActions button.active {
+  border-color: rgba(244, 178, 59, .55);
+  color: var(--gold);
+  background: rgba(244, 178, 59, .1);
+}
+
+.commandMediaBody {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, .95fr);
+  gap: 10px;
+}
+
+.commandMediaList,
+.commandPreviewColumn {
+  min-height: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.commandMediaList {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.commandMediaScroller {
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-color: rgba(244, 178, 59, .65) #171614;
+  scrollbar-width: thin;
+}
+
+.commandMediaScroller::-webkit-scrollbar {
+  width: 10px;
+}
+
+.commandMediaScroller::-webkit-scrollbar-track {
+  background: #171614;
+  border-radius: 999px;
+}
+
+.commandMediaScroller::-webkit-scrollbar-thumb {
+  border: 2px solid #171614;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #f4b23b, #dc6100);
+}
+
+.commandPreviewColumn .panel {
+  height: 100%;
+  display: grid;
+  align-content: start;
+}
+
+.commandPreviewColumn .mediaPreview img,
+.commandPreviewColumn .mediaPreview video,
+.commandPreviewColumn .mediaPreview audio,
+.commandPreviewColumn .mediaPreview.empty {
+  max-height: 34vh;
+}
+
+.commandActionGrid button {
+  min-height: 40px;
+}
+
+.commandActionGrid .primary {
+  grid-column: 1 / -1;
 }
 
 .console {
@@ -1371,8 +1653,8 @@ code {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  max-height: 168px;
-  overflow-y: auto;
+  max-height: none;
+  overflow: visible;
 }
 
 .screenPickerKey {

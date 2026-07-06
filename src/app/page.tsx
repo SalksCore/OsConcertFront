@@ -138,133 +138,153 @@ type Snapshot = {
 
 const emptySnapshot: Snapshot = {
   settings: { activeConcertId: "main", streamFps: 8 },
-  concerts: [],
-  screens: [],
-  groups: [],
-  media: [],
-  events: [],
-};
+          <section className="page commandPage">
+            <div className="commandShell">
+              <header className="commandHeader">
+                <div className="commandTitleBlock">
+                  <p className="eyebrow">Regie</p>
+                  <h2>Commandes</h2>
+                  <p className="muted">Interface compacte. Tout tient sur l’ecran; seul le choix des medias peut defiler.</p>
+                </div>
+                <div className="commandHeaderActions">
+                  <div className="selectedBox">{selectedScreens.length} ecran(s) selectionne(s)</div>
+                  <button onClick={() => setView("live")}><RadioTower size={15} /> Ecrans</button>
+                  <button onClick={() => setView("monitor")}><MonitorUp size={15} /> Monitoring</button>
+                </div>
+              </header>
 
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
+              <div className="commandWorkspace">
+                <aside className="commandSidebar">
+                  <section className="commandBlock">
+                    <div className="commandBlockHead">
+                      <span>Selection</span>
+                      <div className="commandBlockActions">
+                        <button onClick={() => setSelected(screens.map((screen) => screen.id))}><CheckCheck size={13} /> Tous</button>
+                        <button onClick={() => setSelected([])}>Aucun</button>
+                      </div>
+                    </div>
+                    {commandStatus && <div className="commandStatus">{commandStatus}</div>}
+                    <div className="selectedChips">
+                      {selectedScreens.map((screen) => <button key={screen.id} onClick={() => toggleScreen(screen.id)}>{screen.name}</button>)}
+                      {!selectedScreens.length && <span>Aucun ecran selectionne. Choisis un groupe ou un ecran.</span>}
+                    </div>
+                    <div className="groupStrip compactGroupStrip">
+                      {groups.map((group) => <button key={group.id} onClick={() => setSelected(group.screenIds)} style={{ borderColor: group.color }}>{group.name}</button>)}
+                      <button onClick={() => setView("live")}><RadioTower size={15} /> Voir les ecrans</button>
+                    </div>
+                    <div className="screenPicker compactPicker">
+                      <div className="screenPickerHead">
+                        <span>Ecrans</span>
+                      </div>
+                      <div className="screenPickerGrid compactGrid">
+                        {screens.length === 0 && <span className="muted">Aucun ecran dans ce concert.</span>}
+                        {screens.map((screen) => (
+                          <button
+                            key={screen.id}
+                            className={cx("screenPickerKey", selected.includes(screen.id) && "selected")}
+                            onClick={() => toggleScreen(screen.id)}
+                          >
+                            {screen.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
 
-async function api(path: string, init?: RequestInit) {
-  const base = apiBase();
-  let response: Response;
-  try {
-    response = await fetch(`${base}${path}`, {
-      ...init,
-      headers:
-        init?.body instanceof FormData
-          ? init.headers
-          : { "Content-Type": "application/json", ...(init?.headers || {}) },
-    });
-  } catch {
-    throw new Error(`API inaccessible: ${base}`);
-  }
-  if (!response.ok) throw new Error(await response.text());
-  return response.json();
-}
+                  <section className="commandBlock">
+                    <p className="moduleTitle"><Power size={16} /> Alimentation</p>
+                    <div className="deckGrid commandDeckGrid compactDeckGrid">
+                      <button className="deckKey" onClick={() => command({ mode: "boot" }, "boot")}><Power size={22} /><strong>Boot</strong></button>
+                      <button className="deckKey" onClick={() => command({ mode: "boot", message: "Restarting" }, "restart")}><RotateCw size={22} /><strong>Restart</strong></button>
+                      <button className="deckKey" onClick={() => command({ mode: "standby" }, "standby")}><RadioTower size={22} /><strong>Standby</strong></button>
+                      <button className="deckKey" onClick={screenTest}><Clapperboard size={22} /><strong>Screen test</strong></button>
+                      <button className="deckKey danger" onClick={() => command({ mode: "off" }, "off")}><ScreenShareOff size={22} /><strong>Off</strong></button>
+                    </div>
+                  </section>
 
-const MEDIA_EXTS = /\.(jpe?g|png|gif|webp|bmp|svg|avif|mov|qt|mp4|m4v|webm|mkv|avi|ogv|mp3|wav|ogg|oga|m4a|aac|flac)$/i;
+                  <section className="commandBlock">
+                    <p className="moduleTitle"><Palette size={16} /> Couleur directe</p>
+                    <div className="colorConsole commandColorConsole">
+                      <input type="color" value={color} onChange={(event) => setColor(event.target.value)} />
+                      <div className="colorPreview" style={{ background: color }} />
+                      <button className="primary" onClick={() => command({ mode: "color", color, animation: "none" }, "color")}><Palette size={16} /> Envoyer</button>
+                    </div>
+                    <div className="presetGrid commandPresetGrid">
+                      {['#000000', '#ffffff', '#ff6a00', '#f4b23b', '#ff2f2f', '#13d18d', '#2878ff', '#9b4dff'].map((preset) => (
+                        <button key={preset} style={{ background: preset }} onClick={() => setColor(preset)} aria-label={preset} />
+                      ))}
+                    </div>
+                    <div className="messageConsole compactMessageConsole">
+                      <input value={messageText} onChange={(event) => setMessageText(event.target.value)} placeholder="Message texte" />
+                      <button onClick={() => command({ mode: "message", message: messageText }, "message")}>Afficher texte</button>
+                    </div>
+                  </section>
 
-// Accepte un fichier media par son mime OU son extension (les .mov arrivent
-// souvent avec un type vide ou application/octet-stream selon le navigateur).
-function isMediaFile(file: File) {
-  return /^(image|video|audio)\//.test(file.type) || MEDIA_EXTS.test(file.name);
-}
+                  <section className="commandBlock">
+                    <p className="moduleTitle"><WandSparkles size={16} /> Animations</p>
+                    <div className="deckGrid commandFxGrid">
+                      {(["none", "pulse", "scan", "strobe", "flash", "glitch", "wipe", "bars", "zoom"] as AnimationMode[]).map((animation) => (
+                        <button className={cx("deckKey", animationIsActive(animation) && "activeDeck")} key={`fx-core-${animation}`} onClick={() => toggleAnimation(animation)}>
+                          <WandSparkles size={18} /><strong>{animation}</strong>
+                        </button>
+                      ))}
+                    </div>
+                    <div className="deckGrid commandFxGrid advancedDeck">
+                      {(["rise", "fall", "left", "right", "up", "down", "glow", "grid", "pixel", "wave", "drift", "shake", "stair", "tilt", "orbit", "iris", "matrix", "scanline", "lift", "drop"] as AnimationMode[]).map((animation) => (
+                        <button className={cx("deckKey", animationIsActive(animation) && "activeDeck")} key={`fx-${animation}`} onClick={() => toggleAnimation(animation)}>
+                          <WandSparkles size={18} /><strong>{animation}</strong>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
 
-function setAuthCookie(value: boolean) {
-  document.cookie = `concert_os_auth=${value ? "1" : ""}; path=/; max-age=${value ? 60 * 60 * 24 * 30 : 0}; SameSite=Lax`;
-  if (typeof window !== "undefined") window.dispatchEvent(new Event("concert-os-auth-change"));
-}
+                  <section className="commandBlock">
+                    <p className="moduleTitle"><ScreenShare size={16} /> Capture ecran en direct</p>
+                    <div className="deckGrid commandDeckGrid compactDeckGrid">
+                      <button className="deckKey primaryDeck" onClick={startStream} disabled={streaming}><ScreenShare size={22} /><strong>Choisir source</strong></button>
+                      <button className="deckKey danger" onClick={stopStream}><ScreenShareOff size={22} /><strong>Stop</strong></button>
+                    </div>
+                    <p className="streamStatus compactStreamStatus">{streamStatus}</p>
+                    <video className="commandStreamPreview" ref={videoRef} muted autoPlay playsInline />
+                  </section>
+                </aside>
 
-function hasAuthCookie() {
-  return document.cookie.split("; ").some((item) => item === "concert_os_auth=1");
-}
+                <section className="commandMediaPane">
+                  <div className="commandMediaShell">
+                    <div className="commandMediaHead">
+                      <div>
+                        <p className="eyebrow">Mediatheque</p>
+                        <h3>Choix des medias</h3>
+                      </div>
+                      <div className="commandMediaActions">
+                        <button className={cx(mediaFit === "contain" && "active")} onClick={() => setMediaFit("contain")}>Adapter</button>
+                        <button className={cx(mediaFit === "stretch" && "active")} onClick={() => setMediaFit("stretch")}>Etirer</button>
+                        <button className={cx(mediaFit === "stage" && "active")} onClick={() => setMediaFit("stage")}>Plan</button>
+                      </div>
+                    </div>
 
-function useAuthCookie() {
-  return useSyncExternalStore(
-    (callback) => {
-      window.addEventListener("concert-os-auth-change", callback);
-      window.addEventListener("focus", callback);
-      return () => {
-        window.removeEventListener("concert-os-auth-change", callback);
-        window.removeEventListener("focus", callback);
-      };
-    },
-    hasAuthCookie,
-    () => false
-  );
-}
+                    <div className="commandMediaBody">
+                      <div className="commandMediaList">
+                        <MediaTabs value={mediaFilter} onChange={setMediaFilter} counts={snapshot.media} />
+                        <div className="commandMediaScroller">
+                          <MediaGrid media={filteredMedia} activeId={activeMediaId} onPick={setActiveMediaId} compact deck />
+                        </div>
+                      </div>
 
-export default function Home() {
-  const logged = useAuthCookie();
-  const [password, setPassword] = useState("concert");
-  const [view, setView] = useState("home");
-  const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
-  const [apiError, setApiError] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
-  const [color, setColor] = useState("#ff9f1a");
-  const [activeMediaId, setActiveMediaId] = useState("");
-  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number; failed: number; finished?: boolean } | null>(null);
-  const [dragging, setDragging] = useState(false);
-  const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "audio">("image");
-  const [mediaFit, setMediaFit] = useState<"contain" | "stretch" | "stage">("contain");
-  const [messageText, setMessageText] = useState("CONCERT OS");
-  const [streamStatus, setStreamStatus] = useState("Pret a capturer une fenetre, un logiciel ou un ecran.");
-  const [copiedScreenId, setCopiedScreenId] = useState("");
-  const [commandStatus, setCommandStatus] = useState("");
-  const [streaming, setStreaming] = useState(false);
-  const streamRef = useRef<MediaStream | null>(null);
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    if (!logged) return;
-    let active = true;
-
-    const loadSnapshot = async () => {
-      try {
-        const data = await api("/api/v1/snapshot");
-        if (!active) return;
-        setSnapshot(data);
-        setApiError("");
-      } catch (error) {
-        if (active) setApiError(error instanceof Error ? error.message : "API inaccessible");
-      }
-    };
-
-    loadSnapshot();
-    // Poll as a reliable fallback so the panel refreshes on its own (online
-    // status, screens, events...) without a manual reload. The real-time SSE
-    // below can be buffered behind an HTTPS->HTTP proxy (e.g. Vercel rewrites)
-    // and never deliver, so we never rely on it alone.
-    const poll = window.setInterval(loadSnapshot, 2000);
-
-    const events = new EventSource(`${apiBase()}/api/v1/events`);
-    events.addEventListener("snapshot", (event) => {
-      setSnapshot(JSON.parse((event as MessageEvent).data));
-      setApiError("");
-    });
-    // SSE errors are ignored on purpose: the interval keeps the panel live.
-
-    return () => {
-      active = false;
-      window.clearInterval(poll);
-      events.close();
-    };
-  }, [logged]);
-
-  const activeConcert = snapshot.concerts.find((concert) => concert.id === snapshot.settings.activeConcertId);
-  const screens = snapshot.screens.filter((screen) => screen.concertId === snapshot.settings.activeConcertId);
-  const groups = snapshot.groups.filter((group) => group.concertId === snapshot.settings.activeConcertId);
-  const selectedScreens = screens.filter((screen) => selected.includes(screen.id));
-  const activeMedia = snapshot.media.find((media) => media.id === activeMediaId) || snapshot.media[0];
-  const filteredMedia = snapshot.media.filter((media) => mediaFilter === "all" || media.type === mediaFilter);
-  const animationIsActive = (animation: AnimationMode) =>
-    selectedScreens.length > 0 && selectedScreens.every((screen) => (screen.state.animation || "none") === animation);
-
+                      <div className="commandPreviewColumn">
+                        <Panel title="Previsualisation" icon={<Play size={18} />}>
+                          <MediaPreview media={activeMedia} />
+                        </Panel>
+                        <div className="buttonGrid commandActionGrid">
+                          <button className="primary" onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: mediaFit }, "media")}><Play size={16} /> Envoyer le media</button>
+                          <button onClick={() => activeMedia && command({ mode: "media", mediaId: activeMedia.id, mediaUrl: apiAsset(activeMedia.url), mediaType: activeMedia.type, fit: "stage" }, "stretch")}>Plein ecran plan</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            </div>
   async function login(event: FormEvent) {
     event.preventDefault();
     try {
@@ -984,7 +1004,7 @@ export default function Home() {
             </div>
             <div
               className="monitorBoard"
-              style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(screens.length, 1), 2)}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${monitorColumns}, minmax(0, 1fr))` }}
             >
               {screens.length === 0 && <div className="monitorEmpty">Aucun ecran dans ce concert.</div>}
               {screens.map((screen) => (
