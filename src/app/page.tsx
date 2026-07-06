@@ -30,7 +30,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import Image from "next/image";
-import { FormEvent, PointerEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, PointerEvent, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const CONFIGURED_API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:3333").replace(/\/+$/, "");
 
@@ -148,14 +148,30 @@ function isMediaFile(file: File) {
 
 function setAuthCookie(value: boolean) {
   document.cookie = `concert_os_auth=${value ? "1" : ""}; path=/; max-age=${value ? 60 * 60 * 24 * 30 : 0}; SameSite=Lax`;
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("concert-os-auth-change"));
 }
 
 function hasAuthCookie() {
   return document.cookie.split("; ").some((item) => item === "concert_os_auth=1");
 }
 
+function useAuthCookie() {
+  return useSyncExternalStore(
+    (callback) => {
+      window.addEventListener("concert-os-auth-change", callback);
+      window.addEventListener("focus", callback);
+      return () => {
+        window.removeEventListener("concert-os-auth-change", callback);
+        window.removeEventListener("focus", callback);
+      };
+    },
+    hasAuthCookie,
+    () => false
+  );
+}
+
 export default function Home() {
-  const [logged, setLogged] = useState(() => hasAuthCookie());
+  const logged = useAuthCookie();
   const [password, setPassword] = useState("concert");
   const [view, setView] = useState("home");
   const [snapshot, setSnapshot] = useState<Snapshot>(emptySnapshot);
@@ -226,7 +242,6 @@ export default function Home() {
       const result = await api("/api/v1/login", { method: "POST", body: JSON.stringify({ password }) });
       if (result.ok) {
         setAuthCookie(true);
-        setLogged(true);
         setApiError("");
       }
     } catch (error) {
@@ -236,7 +251,6 @@ export default function Home() {
 
   function logout() {
     setAuthCookie(false);
-    setLogged(false);
   }
 
   async function activateConcert(concertId: string) {
