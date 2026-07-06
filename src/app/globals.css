@@ -1206,149 +1206,76 @@ code {
   min-height: 144px;
 }
 
-.monitorPage {
+.monitorOnly {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  background: #000;
+}
+
+.monitorBoard {
+  width: 100vw;
+  height: 100vh;
   display: grid;
-  gap: 12px;
-  max-width: none;
-}
-
-.monitorHero {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.monitorHero h3 {
-  margin: 6px 0 8px;
-  font-size: 22px;
-}
-
-.monitorHeroActions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.monitorLayout {
-  display: grid;
-  grid-template-columns: minmax(0, 2.1fr) minmax(290px, .9fr);
-  gap: 12px;
-  align-items: start;
-}
-
-.monitorPanel,
-.monitorAside {
-  display: grid;
-  gap: 12px;
-}
-
-.monitorScreensPanel {
-  min-height: 100%;
-}
-
-.monitorPanelHead {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.monitorPanelHead h3 {
-  margin: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.monitorPanelHead span {
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: minmax(0, 1fr);
+  gap: 1px;
+  padding: 1px;
+  background: #737373;
 }
 
 .monitorGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  display: contents;
 }
 
 .monitorEmpty {
   grid-column: 1 / -1;
-  min-height: 120px;
   display: grid;
   place-items: center;
-  border: 1px dashed var(--line-soft);
-  border-radius: 12px;
-  color: var(--muted);
-  background: rgba(255, 255, 255, .02);
+  color: #c0c0c0;
+  background: #111;
 }
 
 .monitorTile {
+  position: relative;
   display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--line-soft);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #121211, #0a0a09);
-}
-
-.monitorTileHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.monitorTileHead strong,
-.monitorTileHead span {
-  display: block;
-}
-
-.monitorTileHead strong {
-  font-size: 14px;
-}
-
-.monitorTileHead span {
-  color: var(--muted);
-  font-size: 12px;
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
 }
 
 .monitorFrame {
   position: relative;
-  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, .08);
-  border-radius: 10px;
+  border: 0;
+  border-radius: 0;
   background: #000;
 }
 
 .monitorFrameLabel {
   position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
+  left: 7px;
+  right: 7px;
+  bottom: 7px;
   z-index: 2;
   display: grid;
-  gap: 2px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 10px;
-  background: rgba(0, 0, 0, .58);
-  backdrop-filter: blur(8px);
+  gap: 0;
+  padding: 6px 8px;
+  border: 1px solid rgba(160, 160, 160, .58);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, .38);
 }
 
 .monitorFrameLabel strong {
   color: #fff;
-  font-size: 13px;
-  letter-spacing: .02em;
-}
-
-.monitorFrameLabel span {
-  color: var(--muted);
-  font-size: 11px;
+  font-size: 12px;
+  letter-spacing: .01em;
+  font-weight: 700;
 }
 
 .monitorFrame iframe {
@@ -1407,83 +1334,35 @@ code {
 }
 
 .controlPanel.wide {
-  position: static;
-  width: 100%;
-  max-width: none;
-}
+  .monitorFrameLabel span,
+  .monitorStreamCard,
+  .monitorStreamCard video,
+  .monitorHero,
+  .monitorHeroActions,
+  .monitorLayout,
+  .monitorPanel,
+  .monitorAside,
+  .monitorScreensPanel,
+  .monitorPanelHead,
+  .monitorPanelHead h3,
+  .monitorPanelHead span,
+  .monitorTileHead,
+  .monitorTileHead strong,
+  .monitorTileHead span {
+    display: none;
+  }
 
-.selectedBox {
-  padding: 14px;
-  border: 1px solid rgba(244, 178, 59, .2);
-  border-radius: 8px;
-  background: var(--gold-soft);
-  color: #ffd98a;
-  font-weight: 900;
-}
+  @media (max-height: 1080px) and (min-width: 1400px) {
+    .monitorFrameLabel {
+      left: 6px;
+      right: 6px;
+      bottom: 6px;
+    }
 
-.commandStatus {
-  padding: 10px 12px;
-  border: 1px solid rgba(19, 209, 141, .25);
-  border-radius: 8px;
-  color: #8ff0cc;
-  background: rgba(19, 209, 141, .08);
-  font-size: 13px;
-  font-weight: 800;
-}
-
-.selectedChips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.selectedChips button {
-  min-height: 34px;
-  border: 1px solid rgba(244, 178, 59, .32);
-  border-radius: 999px;
-  padding: 0 12px;
-  color: var(--gold);
-  background: rgba(244, 178, 59, .08);
-}
-
-.selectedChips span {
-  color: var(--muted);
-}
-
-.screenPicker {
-  display: grid;
-  gap: 8px;
-  padding: 10px;
-  border: 1px solid var(--border, rgba(255, 255, 255, .08));
-  border-radius: 12px;
-  background: rgba(255, 255, 255, .02);
-}
-
-.screenPickerHead {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.screenPickerHead > span {
-  font-size: 12px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.screenPickerHead > div {
-  display: flex;
-  gap: 6px;
-}
-
-.screenPickerHead button {
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 999px;
-  background: transparent;
+    .monitorFrameLabel strong {
+      font-size: 11px;
+    }
+  }
   color: var(--text);
   font-size: 12px;
   display: inline-flex;
@@ -2250,8 +2129,7 @@ code {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .monitorLayout,
-  .monitorGrid {
+  .monitorBoard {
     grid-template-columns: 1fr;
   }
 }
@@ -2321,8 +2199,7 @@ code {
       "stream";
   }
 
-  .monitorHero {
-    align-items: flex-start;
-    flex-direction: column;
+  .monitorBoard {
+    grid-template-columns: 1fr;
   }
 }

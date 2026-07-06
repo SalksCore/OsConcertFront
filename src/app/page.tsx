@@ -937,64 +937,24 @@ export default function Home() {
         )}
 
         {view === "monitor" && (
-          <section className="page monitorPage">
-            <div className="monitorHero panel">
-              <div>
-                <p className="eyebrow">Monitoring temps reel</p>
-                <h3>Retour ecrans et flux live</h3>
-                <p className="muted">Vue compacte pour surveiller tous les ecrans en meme temps sans quitter la regie.</p>
-              </div>
-              <div className="monitorHeroActions">
-                <button className="primary" onClick={() => setView("regie")}><Palette size={16} /> Retour regie</button>
-                <button onClick={() => setView("live")}><RadioTower size={16} /> Selection live</button>
-              </div>
-            </div>
-
-            <div className="monitorLayout">
-              <section className="panel monitorPanel monitorScreensPanel">
-                <div className="monitorPanelHead">
-                  <h3><MonitorUp size={18} /> Mosaque des ecrans</h3>
-                  <span>{screens.length} ecran(s)</span>
-                </div>
-                <div className="monitorGrid">
-                  {screens.length === 0 && <div className="monitorEmpty">Aucun ecran dans ce concert.</div>}
-                  {screens.map((screen) => (
-                    <article className="monitorTile" key={screen.id}>
-                      <div className="monitorTileHead">
-                        <div>
-                              <span>{screen.width} x {screen.height} blocs</span>
-                        </div>
-                        <b className={screen.online ? "online" : ""}>{screen.online ? "online" : "offline"}</b>
-                      </div>
-                      <div className="monitorFrame">
-                            <div className="monitorFrameLabel">
-                              <strong>{screen.name}</strong>
-                              <span>{screen.id}</span>
-                            </div>
-                        <iframe
-                          src={`/screen/${screen.id}`}
-                          title={screen.name}
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                    </article>
-                  ))}
-                </div>
-              </section>
-
-              <aside className="monitorAside">
-                <Panel title="Retours camera" icon={<ScreenShare size={18} />}>
-                  <div className="monitorStreamCard">
-                    <p className="muted">Le retour de capture actif est visible ici pour controler le flux avant diffusion.</p>
-                    {streaming ? (
-                      <video ref={videoRef} muted autoPlay playsInline />
-                    ) : (
-                      <div className="monitorStreamEmpty">Aucun stream actif pour le moment.</div>
-                    )}
+          <section className="monitorOnly">
+            <div className="monitorBoard">
+              {screens.length === 0 && <div className="monitorEmpty">Aucun ecran dans ce concert.</div>}
+              {screens.map((screen) => (
+                <article className="monitorTile" key={screen.id}>
+                  <div className="monitorFrame">
+                    <div className="monitorFrameLabel">
+                      <strong>{screen.name}</strong>
+                    </div>
+                    <iframe
+                      src={`/screen/${screen.id}`}
+                      title={screen.name}
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
-                </Panel>
-              </aside>
+                </article>
+              ))}
             </div>
           </section>
         )}
