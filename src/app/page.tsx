@@ -938,7 +938,10 @@ export default function Home() {
 
         {view === "monitor" && (
           <section className="monitorOnly">
-            <div className="monitorBoard">
+            <div
+              className="monitorBoard"
+              style={{ gridTemplateColumns: `repeat(${Math.min(Math.max(screens.length, 1), 2)}, minmax(0, 1fr))` }}
+            >
               {screens.length === 0 && <div className="monitorEmpty">Aucun ecran dans ce concert.</div>}
               {screens.map((screen) => (
                 <article className="monitorTile" key={screen.id}>

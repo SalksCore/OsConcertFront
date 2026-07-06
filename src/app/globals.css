@@ -1218,10 +1218,9 @@ code {
   width: 100vw;
   height: 100vh;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
-  gap: 1px;
-  padding: 1px;
+  gap: 0;
+  padding: 0;
   background: #737373;
 }
 
@@ -1259,21 +1258,22 @@ code {
 
 .monitorFrameLabel {
   position: absolute;
-  left: 7px;
-  right: 7px;
-  bottom: 7px;
+  left: 8px;
+  top: 8px;
+  right: auto;
+  bottom: auto;
   z-index: 2;
   display: grid;
   gap: 0;
-  padding: 6px 8px;
-  border: 1px solid rgba(160, 160, 160, .58);
-  border-radius: 8px;
-  background: rgba(0, 0, 0, .38);
+  padding: 4px 7px;
+  border: 1px solid rgba(160, 160, 160, .38);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .28);
 }
 
 .monitorFrameLabel strong {
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: .01em;
   font-weight: 700;
 }
