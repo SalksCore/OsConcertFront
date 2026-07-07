@@ -12,8 +12,15 @@ function apiBase() {
   return CONFIGURED_API;
 }
 
+// FX speed is a multiplier used by CSS to divide animation durations.
+// Keep it in a sane band so a bad value can never freeze or seizure-flash a screen.
+function clampSpeed(value?: number) {
+  if (!value || Number.isNaN(value)) return 1;
+  return Math.min(4, Math.max(0.25, value));
+}
+
 type ScreenState = {
-  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test";
+  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test" | "menu" | "countdown" | "nowplaying" | "ambient";
   color?: string;
   mediaId?: string;
   mediaUrl?: string;
@@ -21,11 +28,26 @@ type ScreenState = {
   fit?: "contain" | "stretch" | "stage";
   layout?: StageMediaLayout;
   animation?: AnimationMode;
+  animationSpeed?: number;
+  animationColor?: string;
+  fxStyle?: FxStyle;
   message?: string;
+  title?: string;
+  subtitle?: string;
+  countdownTarget?: number;
+  countdownLabel?: string;
+  artist?: string;
+  track?: string;
+  artwork?: string;
+  spotifyUrl?: string;
+  ambient?: AmbientStyle;
   updatedAt?: string;
   startAt?: number;
   test?: ScreenTestInfo;
 };
+
+type FxStyle = "neon" | "hard";
+type AmbientStyle = "grid" | "waves" | "tunnel" | "particles";
 
 type AnimationMode =
   | "none"
@@ -222,8 +244,14 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
     };
   }, [state.mode, id]);
 
+  const fxVars = {
+    background: state.mode === "color" ? state.color : undefined,
+    "--fx-speed": String(clampSpeed(state.animationSpeed)),
+    "--fx-color": state.animationColor || "#ff6a00",
+  } as CSSProperties;
+
   return (
-    <main className={`viewer ${state.mode} ${state.animation || ""}`} style={{ background: state.mode === "color" ? state.color : undefined }}>
+    <main className={`viewer ${state.mode} ${state.animation || ""} fx-${state.fxStyle || "neon"}`} style={fxVars}>
       <div className={`viewerStatus ${connected ? "online" : ""}`}>{connected ? "online" : "offline"}</div>
       {state.mode !== "off" && syncError && <div className="viewerSyncError">{syncError}</div>}
       <div className={`viewerTransition ${transitioning ? "active" : ""} ${state.animation || "none"}`} />
@@ -231,6 +259,10 @@ export default function ScreenViewer({ params }: { params: Promise<{ id: string 
       {state.mode === "boot" && <BootLoader key={state.updatedAt || state.message || "boot"} message={state.message} />}
       {state.mode === "standby" && <StandbyLogo />}
       {state.mode === "message" && <div className="viewerMessage">{state.message}</div>}
+      {state.mode === "menu" && <MenuScreen state={state} />}
+      {state.mode === "countdown" && <CountdownScreen state={state} />}
+      {state.mode === "nowplaying" && <NowPlayingScreen state={state} />}
+      {state.mode === "ambient" && <AmbientScreen state={state} />}
       {state.mode === "test" && <ScreenTest test={state.test} />}
       {state.mode === "media" && state.mediaType === "image" && <StageMedia key={contentKey} state={state} kind="image" />}
       {state.mode === "media" && state.mediaType === "video" && <StageMedia key={contentKey} state={state} kind="video" />}
@@ -285,6 +317,86 @@ function StageMedia({ state, kind }: { state: ScreenState; kind: "image" | "vide
         ? <img src={state.mediaUrl} alt="" />
         : <video src={state.mediaUrl} autoPlay loop muted playsInline />}
     </div>
+  );
+}
+
+function useClock(intervalMs = 1000) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(timer);
+  }, [intervalMs]);
+  return now;
+}
+
+function MenuScreen({ state }: { state: ScreenState }) {
+  const now = useClock(1000);
+  const clock = new Date(now).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <section className="viewerMenu">
+      <div className="viewerMenuGlow" />
+      <div className="viewerMenuScan" />
+      <Image className="viewerMenuLogo" src="/logo.svg" alt="" width={280} height={280} priority />
+      <p className="viewerMenuEyebrow">CONCERT OS · LIVE</p>
+      <h1 className="viewerMenuTitle">{state.title || "CONCERT"}</h1>
+      <p className="viewerMenuSubtitle">{state.subtitle || "Le show va commencer"}</p>
+      <div className="viewerMenuClock">{clock}</div>
+    </section>
+  );
+}
+
+function CountdownScreen({ state }: { state: ScreenState }) {
+  const now = useClock(200);
+  const target = state.countdownTarget || now;
+  const remaining = Math.max(0, target - now);
+  const totalSeconds = Math.round(remaining / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  const live = remaining <= 0;
+  const pad = (value: number) => value.toString().padStart(2, "0");
+  return (
+    <section className={`viewerCountdown ${live ? "live" : ""}`}>
+      <div className="viewerCountdownGlow" />
+      <p className="viewerCountdownLabel">{state.countdownLabel || (live ? "" : "DÉBUT DANS")}</p>
+      <div className="viewerCountdownDigits">{live ? "LIVE" : `${pad(minutes)}:${pad(seconds)}`}</div>
+      {state.title && <p className="viewerCountdownTitle">{state.title}</p>}
+    </section>
+  );
+}
+
+function NowPlayingScreen({ state }: { state: ScreenState }) {
+  return (
+    <section className="viewerNowPlaying">
+      <div className="viewerNowPlayingBg" />
+      <div className="viewerNowPlayingBars"><i /><i /><i /><i /><i /><i /><i /></div>
+      <div className="viewerNowPlayingCard">
+        {state.artwork
+          ? <img className="viewerNowPlayingArt" src={state.artwork} alt="" />
+          : <div className="viewerNowPlayingArt placeholder"><span>♪</span></div>}
+        <div className="viewerNowPlayingText">
+          <p className="viewerNowPlayingEyebrow">NOW PLAYING</p>
+          <h1 className="viewerNowPlayingTrack">{state.track || "—"}</h1>
+          <p className="viewerNowPlayingArtist">{state.artist || "Artiste"}</p>
+          {state.spotifyUrl && (
+            <div className="viewerNowPlayingSpotify">
+              <span className="viewerSpotifyDot" /> Spotify · <code>{state.spotifyUrl.replace(/^https?:\/\//, "")}</code>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AmbientScreen({ state }: { state: ScreenState }) {
+  const style = state.ambient || "grid";
+  return (
+    <section className={`viewerAmbient ambient-${style}`}>
+      <div className="ambientLayer a" />
+      <div className="ambientLayer b" />
+      <div className="ambientLayer c" />
+      {state.title && <div className="viewerAmbientTitle">{state.title}</div>}
+    </section>
   );
 }
 

@@ -46,7 +46,7 @@ function apiAsset(url: string) {
 }
 
 type ScreenState = {
-  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test";
+  mode: "off" | "boot" | "color" | "media" | "message" | "stream" | "standby" | "test" | "menu" | "countdown" | "nowplaying" | "ambient";
   color?: string;
   mediaId?: string;
   mediaUrl?: string;
@@ -54,11 +54,26 @@ type ScreenState = {
   fit?: "contain" | "stretch" | "stage";
   layout?: StageMediaLayout;
   animation?: AnimationMode;
+  animationSpeed?: number;
+  animationColor?: string;
+  fxStyle?: FxStyle;
   message?: string;
+  title?: string;
+  subtitle?: string;
+  countdownTarget?: number;
+  countdownLabel?: string;
+  artist?: string;
+  track?: string;
+  artwork?: string;
+  spotifyUrl?: string;
+  ambient?: AmbientStyle;
   updatedAt?: string;
   startAt?: number;
   test?: ScreenTestInfo;
 };
+
+type FxStyle = "neon" | "hard";
+type AmbientStyle = "grid" | "waves" | "tunnel" | "particles";
 
 type AnimationMode =
   | "none"
@@ -211,6 +226,17 @@ export default function Home() {
   const [mediaFilter, setMediaFilter] = useState<"all" | "image" | "video" | "audio">("image");
   const [mediaFit, setMediaFit] = useState<"contain" | "stretch" | "stage">("contain");
   const [messageText, setMessageText] = useState("CONCERT OS");
+  const [fxSpeed, setFxSpeed] = useState(1);
+  const [fxColor, setFxColor] = useState("#ff1f6b");
+  const [fxStyle, setFxStyle] = useState<FxStyle>("neon");
+  const [menuTitle, setMenuTitle] = useState("CONCERT");
+  const [menuSubtitle, setMenuSubtitle] = useState("Le show va commencer");
+  const [countdownMin, setCountdownMin] = useState(5);
+  const [countdownLabel, setCountdownLabel] = useState("DÉBUT DANS");
+  const [npArtist, setNpArtist] = useState("");
+  const [npTrack, setNpTrack] = useState("");
+  const [npArtwork, setNpArtwork] = useState("");
+  const [npSpotify, setNpSpotify] = useState("");
   const [streamStatus, setStreamStatus] = useState("Pret a capturer une fenetre, un logiciel ou un ecran.");
   const [copiedScreenId, setCopiedScreenId] = useState("");
   const [commandStatus, setCommandStatus] = useState("");
@@ -331,12 +357,34 @@ export default function Home() {
         {
           ...screen.state,
           animation: screen.state.animation === animation ? "none" : animation,
+          animationSpeed: fxSpeed,
+          animationColor: fxColor,
+          fxStyle,
           updatedAt,
           startAt,
         },
       ])
     );
     await commandStates(statesByScreen, `toggle-${animation}`, animation);
+  }
+
+  // Push the live FX sliders (speed / color / look) to the selected screens
+  // without changing which animation is running.
+  async function applyFx() {
+    if (!selected.length) {
+      setCommandStatus("Aucun ecran selectionne.");
+      setView("live");
+      return;
+    }
+    const startAt = Date.now() + (selected.length > 1 ? 320 : 0);
+    const updatedAt = new Date().toISOString();
+    const statesByScreen = Object.fromEntries(
+      selectedScreens.map((screen) => [
+        screen.id,
+        { ...screen.state, animationSpeed: fxSpeed, animationColor: fxColor, fxStyle, updatedAt, startAt },
+      ])
+    );
+    await commandStates(statesByScreen, "fx-params", "Reglages FX");
   }
 
   async function screenTest() {
@@ -908,6 +956,25 @@ export default function Home() {
 
                   <section className="commandBlock">
                     <p className="moduleTitle"><WandSparkles size={16} /> Animations</p>
+                    <div className="fxParams">
+                      <label className="fxSpeed">
+                        <span>Vitesse <b>{fxSpeed.toFixed(2)}×</b></span>
+                        <input type="range" min="0.25" max="4" step="0.05" value={fxSpeed} onChange={(event) => setFxSpeed(Number(event.target.value))} />
+                      </label>
+                      <div className="fxColorRow">
+                        <input type="color" value={fxColor} onChange={(event) => setFxColor(event.target.value)} />
+                        <div className="fxPresets">
+                          {["#ff1f6b", "#12f2ff", "#b026ff", "#39ff14", "#ff6a00", "#ffffff"].map((preset) => (
+                            <button key={preset} style={{ background: preset }} className={cx(fxColor === preset && "active")} onClick={() => setFxColor(preset)} aria-label={preset} />
+                          ))}
+                        </div>
+                      </div>
+                      <div className="fxStyleToggle">
+                        <button className={cx(fxStyle === "neon" && "active")} onClick={() => setFxStyle("neon")}>Néon rave</button>
+                        <button className={cx(fxStyle === "hard" && "active")} onClick={() => setFxStyle("hard")}>Strobe dur</button>
+                        <button className="fxApply" onClick={applyFx}>Appliquer</button>
+                      </div>
+                    </div>
                     <div className="deckGrid commandFxGrid">
                       {["none", "pulse", "scan", "strobe", "flash", "glitch", "wipe", "bars", "zoom"].map((animation) => (
                         <button className={cx("deckKey", animationIsActive(animation as AnimationMode) && "activeDeck")} key={`fx-core-${animation}`} onClick={() => toggleAnimation(animation as AnimationMode)}>
@@ -921,6 +988,34 @@ export default function Home() {
                           <WandSparkles size={18} /><strong>{animation}</strong>
                         </button>
                       ))}
+                    </div>
+                  </section>
+
+                  <section className="commandBlock">
+                    <p className="moduleTitle"><LayoutDashboard size={16} /> Écrans de concert</p>
+                    <div className="concertScreens">
+                      <div className="concertScreenRow">
+                        <input value={menuTitle} onChange={(event) => setMenuTitle(event.target.value)} placeholder="Titre menu" />
+                        <input value={menuSubtitle} onChange={(event) => setMenuSubtitle(event.target.value)} placeholder="Sous-titre" />
+                        <button onClick={() => command({ mode: "menu", title: menuTitle, subtitle: menuSubtitle, animation: "none" }, "menu")}><LayoutDashboard size={15} /> Menu principal</button>
+                      </div>
+                      <div className="concertScreenRow">
+                        <input type="number" min="0" max="120" value={countdownMin} onChange={(event) => setCountdownMin(Number(event.target.value))} placeholder="min" />
+                        <input value={countdownLabel} onChange={(event) => setCountdownLabel(event.target.value)} placeholder="Label (DÉBUT DANS)" />
+                        <button onClick={() => command({ mode: "countdown", countdownTarget: Date.now() + countdownMin * 60000, countdownLabel, title: menuTitle, animation: "none" }, "countdown")}><Calendar size={15} /> Compte à rebours</button>
+                      </div>
+                      <div className="concertScreenRow nowPlayingRow">
+                        <input value={npArtist} onChange={(event) => setNpArtist(event.target.value)} placeholder="Artiste" />
+                        <input value={npTrack} onChange={(event) => setNpTrack(event.target.value)} placeholder="Titre du morceau" />
+                        <input value={npSpotify} onChange={(event) => setNpSpotify(event.target.value)} placeholder="Lien Spotify (https://open.spotify.com/...)" />
+                        <input value={npArtwork} onChange={(event) => setNpArtwork(event.target.value)} placeholder="URL pochette (optionnel)" />
+                        <button onClick={() => command({ mode: "nowplaying", artist: npArtist, track: npTrack, spotifyUrl: npSpotify || undefined, artwork: npArtwork || undefined, animation: "none" }, "nowplaying")}><Play size={15} /> Now playing</button>
+                      </div>
+                      <div className="ambientGrid">
+                        {([["grid", "Grille néon"], ["waves", "Ondes"], ["tunnel", "Tunnel"], ["particles", "Particules"]] as const).map(([style, label]) => (
+                          <button key={style} onClick={() => command({ mode: "ambient", ambient: style, title: "", animation: "none" }, `ambient-${style}`)}><WandSparkles size={15} /> {label}</button>
+                        ))}
+                      </div>
                     </div>
                   </section>
 
